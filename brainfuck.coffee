@@ -10,7 +10,7 @@
 # The Lexer converts the sequence of characters (aka the program representation)
 # into a sequence of tokens.
 
-# ## Tokens
+# ## Valid Symbols
 GT = ">" # Increments the pointer (++p; in C)
 LT = "<" # Decrements the pointer (--p; in C)
 PLUS = "+" # Increments the byte at the pointer (++*p; in C)
@@ -23,69 +23,134 @@ LBRACKET = "[" # Jump forward past the matching ] if the byte at the pointer
 RBRACKET = "]" # Jump backward to the matching [ unless the byte at the
 # pointer is zero. (} in C)
 
-COMMANDS = [GT, LT, PLUS, MINUS, DOT, COMMA, LBRACKET, RBRACKET]
+SYMBOLS = [GT, LT, PLUS, MINUS, DOT, COMMA, LBRACKET, RBRACKET]
 
-# ## Tokenize
-tokenize = (programString, tokenList) ->
-  console.log "-*- Tokenizing -*-"
-  for char in programString
-    if char in COMMANDS
-      tokenList.push char
-    # else it should be treated as a comment.
-  return tokenList
-
-# # Parser
-
-# The Parser construct an abstract syntax tree based on the list of tokens.
-
-# ## Labels
+# ## Tokens
 INC_POINTER = "INC_POINTER"
 DEC_POINTER = "DEC_POINTER"
 INC_BYTE = "INC_BYTE"
 DEC_BYTE = "DEC_BYTE"
 OUTPUT_BYTE = "OUTPUT_BYTE"
 INPUT_BYTE = "INPUT_BYTE"
-JUMP_FORWARD = "JUMP_FORWARD"
-JUMP_BACKWARD = "JUMP_BACKWARD"
+START_BLOCK = "START_BLOCK"
+END_BLOCK = "END_BLOCK"
+
+TOKENS = [INC_POINTER, DEC_POINTER, INC_BYTE, DEC_BYTE, OUTPUT_BYTE, INPUT_BYTE,
+  START_BLOCK, END_BLOCK]
+
+symbolTokenMap = {}
+(symbolTokenMap[symbol] = TOKENS[index]) for symbol, index in SYMBOLS
+
+# ## Tokenize
+
+# (program : String) -> (tokens : list String)
+tokenize = (program) ->
+  program.split("") # Turns program string into a character array
+    .filter((char) -> char in SYMBOLS) # Remove comments
+    .map((symbol) -> symbolTokenMap[symbol]) # Map symbols to tokens
+
+# # Parser
+
+# Labels
+ROOT = "ROOT"
+BLOCK = "BLOCK"
+
+# The Parser construct an abstract syntax tree based on the list of tokens.
 
 # ## Parse
-parse = (tokenList, abstractSyntaxTree) ->
-  console.log "-*- Parsing -*-"
-  for token in tokenList
-    switch token
-      when GT
-        abstractSyntaxTree.push INC_POINTER
-      when LT
-        abstractSyntaxTree.push DEC_POINTER
-      when PLUS
-        abstractSyntaxTree.push INC_BYTE
-      when MINUS
-        abstractSyntaxTree.push DEC_BYTE
-      when DOT
-        abstractSyntaxTree.push OUTPUT_BYTE
-      when COMMA
-        abstractSyntaxTree.push INPUT_BYTE
-      when LBRACKET
-        abstractSyntaxTree.push JUMP_FORWARD
-      when RBRACKET
-        abstractSyntaxTree.push JUMP_BACKWARD
+ast = { 'value' : ROOT, 'parent' : null , 'children' : [] }
+currentParent = ast
 
-  return abstractSyntaxTree
+# (tokens : list String) -> (ast : tree String)
+parse = (tokens) ->
+  token = head(tokens)
+  switch token
 
-# # Machine Model
-instructionPointer = 0
-byteCells = (0 for i in [10..1]) # Should be 30000
-dataPointer = 0
-# input
-# output = console.log
+    when INC_POINTER, DEC_POINTER, INC_BYTE, DEC_BYTE, OUTPUT_BYTE, INPUT_BYTE
+      currentParent.children.push token
+      parse tail(tokens)
+
+    when START_BLOCK
+      blockObj = { 'value' : BLOCK, 'parent' : currentParent , 'children' : [] }
+      currentParent.children.push blockObj
+      currentParent = blockObj
+      parse tail(tokens)
+
+    when END_BLOCK
+      currentParent = currentParent.parent
+      parse tail(tokens)
+
+  return ast
+
+# # Evaluator
+
+# ## Machine Model
+environment = (0 for i in [0...25]) # Should be 30000
+pointer = 0
+# TODO: handle input
+
+# ## Evaluate
+evaluate = (ast) ->
+  evaluateBlock ast
+
+evaluateBlock = (block) ->
+  for child in block.children
+    if isCommand(child) then evaluateCommand(child)
+    if isBlock(child) then evaluateBlock(child) while environment[pointer] > 0
+
+evaluateCommand = (command) ->
+  switch command
+    when INC_POINTER
+      pointer++
+    when DEC_POINTER
+      pointer--
+    when INC_BYTE
+      environment[pointer]++
+    when DEC_BYTE
+      environment[pointer]--
+    when OUTPUT_BYTE
+      console.log(String.fromCharCode(environment[pointer]))
+    when INPUT_BYTE then console.log "INPUT!"
+
+isCommand = (child) -> typeof child is 'string'
+isBlock = (child) -> typeof child is 'object'
+
+# # Helper functions
+head = (list) -> list[0]
+tail = (list) -> list[1..]
 
 # # Main
-program = "this+>>is>>..,<<a,++[-test.--].program"
-console.log "Input program:"
-console.log program
-tokenList = tokenize(program, [])
-console.log "Resulting token list:"
-console.log tokenList
-abstractSyntaxTree = parse(tokenList, [])
-console.log "Resulting abstract syntax tree:"
-console.log abstractSyntaxTree
+program = "
+  +++++ +++++             initialize counter (cell #0) to 10
+  [                       use loop to set the next four cells to 70/100/30/10
+      > +++++ ++              add  7 to cell #1
+      > +++++ +++++           add 10 to cell #2
+      > +++                   add  3 to cell #3
+      > +                     add  1 to cell #4
+      <<<< -                  decrement counter (cell #0)
+  ]
+  > ++ .                  print 'H'
+  > + .                   print 'e'
+  +++++ ++ .              print 'l'
+  .                       print 'l'
+  +++ .                   print 'o'
+  > ++ .                  print ' '
+  << +++++ +++++ +++++ .  print 'W'
+  > .                     print 'o'
+  +++ .                   print 'r'
+  ----- - .               print 'l'
+  ----- --- .             print 'd'
+  > + .                   print '!'
+  > .                     print '\n'
+"
+console.log "-*- Input Program -*-"
+console.log '\"' + program + '\"'
+console.log "-*- Tokenizing -*-"
+tokens = tokenize(program)
+console.log tokens
+console.log "-*- Parsing -*-"
+ast = parse(tokens)
+console.log ast
+console.log "-*- Evaluating -*-"
+evaluate ast
+console.log "-*- Program Execution Terminated -*-"
