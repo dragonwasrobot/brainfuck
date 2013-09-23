@@ -91,8 +91,8 @@ parse = (tokens) ->
 # ## Machine Model
 environment = (0 for i in [0...100]) # Originally 30000 instead of 100
 pointer = 0
-output = (string) -> console.log string
-input = prompt
+output = (byte) -> console.log String.fromCharCode(byte)
+input = () -> prompt "Input byte value: "
 
 # ## Evaluate
 
@@ -116,10 +116,9 @@ evaluateCommand = (command) ->
     when DEC_BYTE
       environment[pointer]--
     when OUTPUT_BYTE
-      output(String.fromCharCode(environment[pointer]))
+      output environment[pointer]
     when INPUT_BYTE
-      byteValue = input("Input byte value: ")
-      environment[pointer] = byteValue
+      environment[pointer] = input()
 
 isCommand = (child) -> typeof child is 'string'
 isBlock = (child) -> typeof child is 'object'
@@ -135,7 +134,7 @@ log = (string) -> if debug then log string
 
 # We presume no one in their right mind would want to type brainfuck directly
 # into the interpreter, but rather specify the path of a file to execute.
-filename = prompt("Enter path to input program: ")
+filename = prompt("Enter path of input program: ")
 program = fs.readFileSync(filename, 'utf8')
 
 log "-*- Input Program -*-"
