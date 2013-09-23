@@ -1,0 +1,4 @@
+# dot-gitignore
+
+# Library
+node_modules/

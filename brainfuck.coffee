@@ -124,37 +124,26 @@ head = (list) -> list[0]
 tail = (list) -> list[1..]
 
 # # Main
-program = "
-  +++++ +++++             initialize counter (cell #0) to 10\n
-  [                       use loop to set the next four cells to 70/100/30/10\n
-      > +++++ ++              add  7 to cell #1\n
-      > +++++ +++++           add 10 to cell #2\n
-      > +++                   add  3 to cell #3\n
-      > +                     add  1 to cell #4\n
-      <<<< -                  decrement counter (cell #0)\n
-  ]\n
-  > ++ .                  print 'H'\n
-  > + .                   print 'e'\n
-  +++++ ++ .              print 'l'\n
-  .                       print 'l'\n
-  +++ .                   print 'o'\n
-  > ++ .                  print ' '\n
-  << +++++ +++++ +++++ .  print 'W'\n
-  > .                     print 'o'\n
-  +++ .                   print 'r'\n
-  ----- - .               print 'l'\n
-  ----- --- .             print 'd'\n
-  > + .                   print '!'\n
-  > .                     print '\n'
-"
-console.log "-*- Input Program -*-"
-console.log '\"' + program + '\"'
-console.log "-*- Tokenizing -*-"
-tokens = tokenize(program)
-console.log tokens
-console.log "-*- Parsing -*-"
-ast = parse(tokens)
-console.log ast
-console.log "-*- Evaluating -*-"
-evaluate ast
-console.log "-*- Program Execution Terminated -*-"
+prompt = require 'prompt'
+fs = require 'fs'
+prompt.start()
+prompt.get(['filename'], (error, result) ->
+  if error
+    console.log("Error: " + error)
+    return
+  console.log "-*- Input Program -*-"
+  console.log("Filename: " + result.filename)
+  fs.readFile(result.filename, 'utf8', (error, program) ->
+    if error
+      console.log("Error: " + error)
+      return
+    console.log '\"' + program + '\"'
+    console.log "-*- Tokenizing -*-"
+    tokens = tokenize(program)
+    console.log tokens
+    console.log "-*- Parsing -*-"
+    ast = parse(tokens)
+    console.log ast
+    console.log "-*- Evaluating -*-"
+    evaluate ast
+    console.log "-*- Program Execution Terminated -*-"))
