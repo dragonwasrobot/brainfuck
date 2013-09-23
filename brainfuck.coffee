@@ -89,7 +89,7 @@ parse = (tokens) ->
 # # Evaluator
 
 # ## Machine Model
-environment = (0 for i in [0...25]) # Should be 30000
+environment = (0 for i in [0...100]) # Originally 30000 instead of 100
 pointer = 0
 output = (string) -> console.log string
 input = prompt
