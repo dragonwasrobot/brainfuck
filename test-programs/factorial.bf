@@ -1,3 +1,4 @@
+Prints the first 6 factorial numbers
 +++++++++++++++++++++++++++++++++     c1v33 : ASCII code of !
 >++++++++++++++++++++++++++++++
 +++++++++++++++++++++++++++++++       c2v61 : ASCII code of =
