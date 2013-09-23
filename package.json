@@ -2,6 +2,6 @@
   "name": "brainfuck",
   "version": "0.2.0",
   "dependencies": {
-    "prompt": "*"
+    "sync-prompt": "*"
   }
 }

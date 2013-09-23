@@ -1,5 +1,9 @@
 # brainfuck.coffee
 
+# ## Require
+prompt = require('sync-prompt').prompt
+fs = require 'fs'
+
 # This is a Brainfuck interpreter. Brainfuck has two types of constructs:
 # commands and comments.
 # There are 8 commands and all consist of 1 symbol: (> < + - . , [ ]).
@@ -87,7 +91,8 @@ parse = (tokens) ->
 # ## Machine Model
 environment = (0 for i in [0...25]) # Should be 30000
 pointer = 0
-# TODO: handle input
+output = (string) -> console.log string
+input = prompt
 
 # ## Evaluate
 
@@ -111,10 +116,10 @@ evaluateCommand = (command) ->
     when DEC_BYTE
       environment[pointer]--
     when OUTPUT_BYTE
-      console.log(String.fromCharCode(environment[pointer]))
+      output(String.fromCharCode(environment[pointer]))
     when INPUT_BYTE
-      console.log "(Should prompt user)"
-      # prompt("Input:")
+      byteValue = input("Input byte value: ")
+      environment[pointer] = byteValue
 
 isCommand = (child) -> typeof child is 'string'
 isBlock = (child) -> typeof child is 'object'
@@ -123,27 +128,28 @@ isBlock = (child) -> typeof child is 'object'
 head = (list) -> list[0]
 tail = (list) -> list[1..]
 
+debug = false
+log = (string) -> if debug then log string
+
 # # Main
-prompt = require 'prompt'
-fs = require 'fs'
-prompt.start()
-prompt.get(['filename'], (error, result) ->
-  if error
-    console.log("Error: " + error)
-    return
-  console.log "-*- Input Program -*-"
-  console.log("Filename: " + result.filename)
-  fs.readFile(result.filename, 'utf8', (error, program) ->
-    if error
-      console.log("Error: " + error)
-      return
-    console.log '\"' + program + '\"'
-    console.log "-*- Tokenizing -*-"
-    tokens = tokenize(program)
-    console.log tokens
-    console.log "-*- Parsing -*-"
-    ast = parse(tokens)
-    console.log ast
-    console.log "-*- Evaluating -*-"
-    evaluate ast
-    console.log "-*- Program Execution Terminated -*-"))
+
+# We presume no one in their right mind would want to type brainfuck directly
+# into the interpreter, but rather specify the path of a file to execute.
+filename = prompt("Enter path to input program: ")
+program = fs.readFileSync(filename, 'utf8')
+
+log "-*- Input Program -*-"
+log '\"' + program + '\"'
+
+log "-*- Tokenizing -*-"
+tokens = tokenize(program)
+log tokens
+
+log "-*- Parsing -*-"
+ast = parse(tokens)
+log ast
+
+log "-*- Evaluating -*-"
+evaluate ast
+
+log "-*- Program Execution Terminated -*-"
