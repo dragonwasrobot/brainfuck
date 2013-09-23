@@ -90,6 +90,8 @@ pointer = 0
 # TODO: handle input
 
 # ## Evaluate
+
+# (ast : tree String) -> unit
 evaluate = (ast) ->
   evaluateBlock ast
 
@@ -110,7 +112,9 @@ evaluateCommand = (command) ->
       environment[pointer]--
     when OUTPUT_BYTE
       console.log(String.fromCharCode(environment[pointer]))
-    when INPUT_BYTE then console.log "INPUT!"
+    when INPUT_BYTE
+      console.log "(Should prompt user)"
+      # prompt("Input:")
 
 isCommand = (child) -> typeof child is 'string'
 isBlock = (child) -> typeof child is 'object'
@@ -121,26 +125,26 @@ tail = (list) -> list[1..]
 
 # # Main
 program = "
-  +++++ +++++             initialize counter (cell #0) to 10
-  [                       use loop to set the next four cells to 70/100/30/10
-      > +++++ ++              add  7 to cell #1
-      > +++++ +++++           add 10 to cell #2
-      > +++                   add  3 to cell #3
-      > +                     add  1 to cell #4
-      <<<< -                  decrement counter (cell #0)
-  ]
-  > ++ .                  print 'H'
-  > + .                   print 'e'
-  +++++ ++ .              print 'l'
-  .                       print 'l'
-  +++ .                   print 'o'
-  > ++ .                  print ' '
-  << +++++ +++++ +++++ .  print 'W'
-  > .                     print 'o'
-  +++ .                   print 'r'
-  ----- - .               print 'l'
-  ----- --- .             print 'd'
-  > + .                   print '!'
+  +++++ +++++             initialize counter (cell #0) to 10\n
+  [                       use loop to set the next four cells to 70/100/30/10\n
+      > +++++ ++              add  7 to cell #1\n
+      > +++++ +++++           add 10 to cell #2\n
+      > +++                   add  3 to cell #3\n
+      > +                     add  1 to cell #4\n
+      <<<< -                  decrement counter (cell #0)\n
+  ]\n
+  > ++ .                  print 'H'\n
+  > + .                   print 'e'\n
+  +++++ ++ .              print 'l'\n
+  .                       print 'l'\n
+  +++ .                   print 'o'\n
+  > ++ .                  print ' '\n
+  << +++++ +++++ +++++ .  print 'W'\n
+  > .                     print 'o'\n
+  +++ .                   print 'r'\n
+  ----- - .               print 'l'\n
+  ----- --- .             print 'd'\n
+  > + .                   print '!'\n
   > .                     print '\n'
 "
 console.log "-*- Input Program -*-"
