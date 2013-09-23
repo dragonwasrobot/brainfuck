@@ -128,7 +128,7 @@ head = (list) -> list[0]
 tail = (list) -> list[1..]
 
 debug = false
-log = (string) -> if debug then log string
+log = (string) -> if debug then console.log string
 
 # # Main
 
