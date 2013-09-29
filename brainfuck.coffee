@@ -219,13 +219,19 @@ tapeSize = 100
 cells = (0 for i in [0...tapeSize])
 cellsize = 255
 pointer = 0
-output = (byte) -> console.log String.fromCharCode(byte)
+output = (byte) -> outputBuffer += String.fromCharCode(byte)
 input = () -> prompt "Input byte value> "
+
+outputBuffer = ""
 
 # ## Evaluate
 
 # (ast : tree String) -> unit
 evaluate = (tree) ->
+
+  # Reset tape and outputBuffer
+  outputBuffer = ""
+  cells = (0 for i in [0...tapeSize])
 
   commands = [ INC_POINTER, DEC_POINTER, INC_BYTE, DEC_BYTE,
     OUTPUT_BYTE, INPUT_BYTE ]
@@ -274,7 +280,9 @@ evaluate = (tree) ->
       if isCommand(child) then evaluateCommand(child)
       if isBlock(child) then evaluateBlock(child) while cells[pointer] > 0
 
-  return evaluateBlock tree
+  evaluateBlock tree
+
+  return outputBuffer
 
 # # Helper functions
 head = (list) -> list[0]
@@ -285,25 +293,32 @@ log = (string) -> if debug then console.log string
 
 # # Main
 
+interpret = (source) ->
+  console.log source
+  evaluate(parse(tokenize(source)))
+
 # We presume no one in their right mind would want to type brainfuck directly
 # into the interpreter, but rather specify the path of a file to execute.
 
 # filename = prompt("Enter path of input program: ")
-filename = "test-programs/helloworld.bf"
-program = fs.readFileSync(filename, 'utf8')
+# filename = "test-programs/helloworld.bf"
+# program = fs.readFileSync(filename, 'utf8')
 
-log "-*- Input Program -*-"
-log '\"' + program + '\"'
+# log "-*- Input Program -*-"
+# log '\"' + program + '\"'
 
-log "-*- Tokenizing -*-"
-tokens = tokenize(program)
-log tokens
+# log "-*- Tokenizing -*-"
+# tokens = tokenize(program)
+# log tokens
 
-log "-*- Parsing -*-"
-tree = parse(tokens)
-log tree
+# log "-*- Parsing -*-"
+# tree = parse(tokens)
+# log tree
 
-log "-*- Evaluating -*-"
-evaluate tree
+# log "-*- Evaluating -*-"
+# evaluate tree
 
-log "-*- Program Execution Terminated -*-"
+# log "-*- Program Execution Terminated -*-"
+
+# ## Exports
+exports.interpret = interpret
