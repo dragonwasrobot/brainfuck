@@ -1,7 +1,13 @@
 {
-  "name": "brainfuck",
-  "version": "0.2.0",
-  "dependencies": {
-    "sync-prompt": "*"
+  "name" : "brainfuck",
+  "version" : "0.3.0",
+	"description" : "A brainfuck interpreter",
+	"author" : "Peter Urbak peter<at>dragonwasrobot<dot>com",
+	"scripts" : {
+			"docs" : "make docs"
+	},
+  "dependencies" : {
+    "sync-prompt" : "*",
+		"docco" : "*"
   }
 }

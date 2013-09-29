@@ -1,4 +1,10 @@
 # dot-gitignore
 
+# OS X crap
+.DS_Store
+
 # Library
 node_modules/
+
+# Documentation
+docs/
