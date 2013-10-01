@@ -9,7 +9,6 @@ app.use app.router
 
 app.use express.static(__dirname + '/html/')
 
-
 # ## Create interface for brainfuck interpreter
 app.get('/interpret/:source', (request, response) ->
   source = request.params.source
