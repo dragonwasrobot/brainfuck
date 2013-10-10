@@ -229,8 +229,9 @@ outputBuffer = ""
 # (ast : tree String) -> unit
 evaluate = (tree) ->
 
-  # Reset tape and outputBuffer
+  # Reset tape, pointer and outputBuffer
   outputBuffer = ""
+  pointer = 0
   cells = (0 for i in [0...tapeSize])
 
   commands = [ INC_POINTER, DEC_POINTER, INC_BYTE, DEC_BYTE,
@@ -284,6 +285,60 @@ evaluate = (tree) ->
 
   return outputBuffer
 
+# (ast : tree String) -> String (CoffeeScript function)
+compileToCoffeeScript = (tree) ->
+  js = "# Compiled Brainfuck code:\n
+cells = (0 for i in [0...#{tapeSize}])\n
+pointer = 0\n
+fun = () ->\n"
+
+  # Indentation bookkeeper
+  insertTabs = (tabs) -> (js += '\t') for tab in [tabs...0]
+  addString = (tabs, str) ->
+    insertTabs(tabs)
+    (js += "#{str}\n")
+
+  # Predicate functions
+  commands = [ INC_POINTER, DEC_POINTER, INC_BYTE, DEC_BYTE,
+    OUTPUT_BYTE, INPUT_BYTE ]
+
+  isCommand = (node) -> node.value in commands
+  isBlock = (node) -> node.value is BLOCK
+
+  # compile functions
+  compileCommand = (tabs, command) ->
+
+    switch getCommandValue(command)
+
+      when INC_POINTER then addString(tabs, "pointer++")
+      when DEC_POINTER then addString(tabs, "pointer--")
+
+      when INC_BYTE then addString(tabs, "cells[pointer]++")
+      when DEC_BYTE then addString(tabs, "cells[pointer]--")
+
+      when OUTPUT_BYTE
+        addString(tabs, "console.log(String.fromCharCode(cells[pointer]))")
+      when INPUT_BYTE then addString(tabs, "") # todo
+
+  compileBlock = (tabs, block) ->
+    tabs++
+    for child in getBlockChildren(block)
+      if isCommand(child) then compileCommand(tabs, child)
+      if isBlock(child)
+        addString(tabs, "while cells[pointer] > 0")
+        compileBlock(tabs, child)
+
+  compileBlock(0, tree)
+
+  addString(0, "fun()")
+  console.log js
+
+  fs.writeFile("output.coffee", js, (err) ->
+    if err then console.log err
+    else console.log "output file saved")
+
+  return js
+
 # # Helper functions
 head = (list) -> list[0]
 tail = (list) -> list[1..]
@@ -296,6 +351,10 @@ log = (string) -> if debug then console.log string
 interpret = (source) ->
   console.log source
   evaluate(parse(tokenize(source)))
+
+compile = (source) ->
+  console.log source
+  compileToCoffeeScript(parse(tokenize(source)))
 
 # We presume no one in their right mind would want to type brainfuck directly
 # into the interpreter, but rather specify the path of a file to execute.
@@ -322,3 +381,4 @@ interpret = (source) ->
 
 # ## Exports
 exports.interpret = interpret
+exports.compile = compile

@@ -4,9 +4,17 @@
     <title>Brainfuck Interpreter</title>
     <script type="text/javascript" src="javascript/jquery.js"></script>
     <script type="text/javascript">
-      var submitCode = function() {
+      var interpret = function() {
         var code = document.getElementById('codeInput').value;
         var url = "interpret/" + encodeURIComponent(code);
+        $.get(url, function (data) {
+          alert(data);
+        });
+      };
+
+      var compile = function() {
+        var code = document.getElementById('codeInput').value;
+        var url = "compile/" + encodeURIComponent(code);
         $.get(url, function (data) {
           alert(data);
         });
@@ -37,6 +45,7 @@
 ----- --- .             print 'd'
 > + .                   print '!'
 > .                     print '\n'</textarea>
-    <button type="submit" onClick="submitCode()">Run</button>
+    <button type="submit" onClick="interpret()">Interpret</button>
+    <button type="submit" onClick="compile()">Compile</button>
   </body>
 </html>
