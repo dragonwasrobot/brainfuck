@@ -251,35 +251,48 @@ evaluate = (tree) ->
           throw "Pointer ran off tape, to the right, while evaluating:
 #{getCommandRow(command)}:#{getCommandColumn(command)}."
         pointer++
+        undefined
 
       when DEC_POINTER
         if pointer is 0
             throw "Pointer ran off tape, to the left, while evaluating:
 #{getCommandRow(command)}:#{getCommandColumn(command)}."
         pointer--
+        undefined
 
       when INC_BYTE
         if cells[pointer] is cellsize
           throw "Integer overflow while evaluating:
 #{getCommandRow(command)}:#{getCommandColumn(command)}."
         cells[pointer]++
+        undefined
 
       when DEC_BYTE
         if cells[pointer] is 0
           throw "Integer underflow while evaluating:
 #{getCommandRow(command)}:#{getCommandColumn(command)}."
         cells[pointer]--
+        undefined
 
       when OUTPUT_BYTE
         output cells[pointer]
+        undefined
 
       when INPUT_BYTE
         cells[pointer] = input()
+        undefined
 
   evaluateBlock = (block) ->
     for child in getBlockChildren(block)
-      if isCommand(child) then evaluateCommand(child)
-      if isBlock(child) then evaluateBlock(child) while cells[pointer] > 0
+      if isCommand(child)
+        evaluateCommand(child)
+        undefined
+      if isBlock(child)
+        while cells[pointer] > 0
+          evaluateBlock(child) 
+          undefined
+      undefined
+    undefined
 
   evaluateBlock tree
 
