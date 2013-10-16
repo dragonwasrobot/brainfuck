@@ -6,25 +6,21 @@
     <script type="text/javascript">
       var interpret = function() {
         var code = document.getElementById('codeInput').value;
-        var url = "interpret/" + encodeURIComponent(code);
-        $.get(url, function (data) {
-          alert(data);
+			  var checked = document.getElementById('optimizeCheckbox').checked;
+        var url = "interpret/" + checked + "/ " + encodeURIComponent(code);
+        $.get(url, function (result) {
+			    outputArea = document.getElementById('codeOutput');
+			    outputArea.value = result;
         });
       };
 
       var compile = function() {
         var code = document.getElementById('codeInput').value;
-        var url = "compile/" + encodeURIComponent(code);
-        $.get(url, function (data) {
-          alert(data);
-        });
-      };
-
-      var optimize = function() {
-        var code = document.getElementById('codeInput').value;
-        var url = "optimize/" + encodeURIComponent(code);
-        $.get(url, function (data) {
-          alert(data);
+			  var checked = document.getElementById('optimizeCheckbox').checked;
+        var url = "compile/" + checked + "/" + encodeURIComponent(code);
+        $.get(url, function (result) {
+			    outputArea = document.getElementById('codeOutput');
+			    outputArea.value = result;
         });
       };
     </script>
@@ -55,6 +51,10 @@
 > .                     print '\n'</textarea>
     <button type="submit" onClick="interpret()">Interpret</button>
     <button type="submit" onClick="compile()">Compile</button>
-    <button type="submit" onClick="optimize()">Optimize</button>
+		<input type="checkbox" name="optimize" id="optimizeCheckbox">
+		  Optimize
+    </input>
+		<textarea rows="20" cols="40" id="codeOutput">output field</textarea>
+
   </body>
 </html>

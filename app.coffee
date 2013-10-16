@@ -10,17 +10,16 @@ app.use app.router
 app.use express.static(__dirname + '/html/')
 
 # ## Create interface for brainfuck interpreter
-app.get('/interpret/:source', (request, response) ->
+app.get('/interpret/:optimize/:source', (request, response) ->
   source = request.params.source
-  response.send(200, brainfuck.interpret(source) + '\n'))
+  optimize = (request.params.optimize is 'true')
+  response.send(200, brainfuck.interpret(source, optimize) + '\n'))
 
-app.get('/compile/:source', (request, response) ->
+app.get('/compile/:optimize/:source', (request, response) ->
   source = request.params.source
-  response.send(200, brainfuck.compile(source) + '\n'))
-
-app.get('/optimize/:source', (request, response) ->
-    source = request.params.source
-    response.send(200, brainfuck.optimize(source) + '\n'))
+  optimize = (request.params.optimize is 'true')
+  console.log optimize
+  response.send(200, brainfuck.compile(source, optimize) + '\n'))
 
 # ## Start server
 app.listen 8000

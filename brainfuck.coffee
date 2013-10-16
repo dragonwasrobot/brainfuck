@@ -329,7 +329,9 @@ fun = () ->\n"
 
   # Predicate functions
   commands = [ INC_POINTER, DEC_POINTER, INC_BYTE, DEC_BYTE,
-    OUTPUT_BYTE, INPUT_BYTE ]
+    OUTPUT_BYTE, INPUT_BYTE,
+    # Optimized commands
+    INC_POINTER_N, DEC_POINTER_N, INC_BYTE_N, DEC_BYTE_N ]
 
   isCommand = (node) -> node.value in commands
   isBlock = (node) -> node.value is BLOCK
@@ -349,6 +351,12 @@ fun = () ->\n"
         addString(tabs, "console.log(String.fromCharCode(cells[pointer]))")
       when INPUT_BYTE then addString(tabs, "") # todo
 
+      # Optimized commands
+      when INC_POINTER_N then addString(tabs, "pointer += #{command.count}")
+      when DEC_POINTER_N then addString(tabs, "pointer -= #{command.count}")
+      when INC_BYTE_N then addString(tabs, "cells[pointer] += #{command.count}")
+      when DEC_BYTE_N then addString(tabs, "cells[pointer] -= #{command.count}")
+
   compileBlock = (tabs, block) ->
     tabs++
     for child in getBlockChildren(block)
@@ -361,10 +369,6 @@ fun = () ->\n"
 
   addString(0, "fun()")
 
-  fs.writeFile("output.coffee", js, (err) ->
-    if err then log err
-    else log "output file saved")
-
   return js
 
 INC_POINTER_N = 'INC_POINTER_N'
@@ -373,7 +377,7 @@ INC_BYTE_N = 'INC_BYTE_N'
 DEC_BYTE_N = 'DEC_BYTE_N'
 
 # (ast : tree String) -> (ast : tree String)
-optimizeToMetaBrainFuck = (tree) ->
+optimize = (tree) ->
 
   # Helper functions
   isBlock = (node) -> node.value is BLOCK
@@ -436,7 +440,57 @@ optimizeToMetaBrainFuck = (tree) ->
   return tree
 
 # Pretty printer
-prettyPrint = (tree) -> # todo
+prettyPrint = (tree) ->
+  pretty = ""
+
+  # Indentation bookkeeper
+  insertTabs = (tabs) -> (pretty += '\t') for tab in [tabs...0]
+  addString = (tabs, str) ->
+    insertTabs(tabs)
+    (pretty += "#{str}\n")
+
+  # Predicate functions
+  commands = [ INC_POINTER, DEC_POINTER, INC_BYTE, DEC_BYTE,
+    OUTPUT_BYTE, INPUT_BYTE,
+    # Optimized commands
+    INC_POINTER_N, DEC_POINTER_N, INC_BYTE_N, DEC_BYTE_N ]
+
+  isCommand = (node) -> node.value in commands
+  isBlock = (node) -> node.value is BLOCK
+
+  # compile functions
+  compileCommand = (tabs, command) ->
+
+    switch getCommandValue(command)
+
+      when INC_POINTER then addString(tabs, "pointer++")
+      when DEC_POINTER then addString(tabs, "pointer--")
+
+      when INC_BYTE then addString(tabs, "cells[pointer]++")
+      when DEC_BYTE then addString(tabs, "cells[pointer]--")
+
+      when OUTPUT_BYTE
+        addString(tabs, "console.log(String.fromCharCode(cells[pointer]))")
+      when INPUT_BYTE then addString(tabs, "") # todo
+
+  compileBlock = (tabs, block) ->
+    tabs++
+    for child in getBlockChildren(block)
+      if isCommand(child) then compileCommand(tabs, child)
+      if isBlock(child)
+        addString(tabs, "while cells[pointer] > 0")
+        compileBlock(tabs, child)
+
+  compileBlock(0, tree)
+
+  addString(0, "fun()")
+
+  fs.writeFile("output.coffee", pretty, (err) ->
+    if err then log err
+    else log "output file saved")
+
+  return pretty
+
 
 # # Helper functions
 head = (list) -> list[0]
@@ -447,7 +501,7 @@ log = (string) -> if debug then console.log string
 
 # # Main
 
-interpret = (source) ->
+processSource = (source, shouldOptimize, resultFunction) ->
   log "-*- Source -*-"
   log source
 
@@ -459,73 +513,21 @@ interpret = (source) ->
   log "-*- Abstract Syntax Tree -*-"
   log ast
 
-  result = evaluate(ast)
+  if shouldOptimize
+    ast = optimize(ast)
+    console.log "-*- Optimized Abstract Syntax Tree -*-"
+
+  result = resultFunction(ast)
   log "-*- Result -*-"
   log result
   return result
 
-compile = (source) ->
-  log "-*- Source -*-"
-  log source
+interpret = (source, shouldOptimize) ->
+  processSource(source, shouldOptimize, evaluate)
 
-  tokens = tokenize(source)
-  log "-*- Tokens -*-"
-  log tokens
-
-  ast = parse(tokens)
-  log "-*- Abstract Syntax Tree -*-"
-  log ast
-
-  result = compileToCoffeeScript(ast)
-  log "-*- Result -*-"
-  log result
-  return result
-
-optimize = (source) ->
-  log "-*- Source -*-"
-  log source
-
-  tokens = tokenize(source)
-  log "-*- Tokens -*-"
-  log tokens
-
-  ast = parse(tokens)
-  log "-*- Abstract Syntax Tree -*-"
-  log ast
-
-  optimizedAst = optimizeToMetaBrainFuck(ast)
-  log "-*- Optimized Abstract Syntax Tree -*-"
-  log optimizedAst
-
-  result = evaluate(optimizedAst)
-  log "-*- Result -*-"
-  log result
-  return result
-
-# We presume no one in their right mind would want to type brainfuck directly
-# into the interpreter, but rather specify the path of a file to execute.
-
-# filename = prompt("Enter path of input program: ")
-# filename = "test-programs/helloworld.bf"
-# program = fs.readFileSync(filename, 'utf8')
-
-# log "-*- Input Program -*-"
-# log '\"' + program + '\"'
-
-# log "-*- Tokenizing -*-"
-# tokens = tokenize(program)
-# log tokens
-
-# log "-*- Parsing -*-"
-# tree = parse(tokens)
-# log tree
-
-# log "-*- Evaluating -*-"
-# evaluate tree
-
-# log "-*- Program Execution Terminated -*-"
+compile = (source, shouldOptimize) ->
+  processSource(source, shouldOptimize, compileToCoffeeScript)
 
 # ## Exports
 exports.interpret = interpret
 exports.compile = compile
-exports.optimize = optimize
