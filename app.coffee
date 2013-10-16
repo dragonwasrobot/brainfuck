@@ -18,7 +18,6 @@ app.get('/interpret/:optimize/:source', (request, response) ->
 app.get('/compile/:optimize/:source', (request, response) ->
   source = request.params.source
   optimize = (request.params.optimize is 'true')
-  console.log optimize
   response.send(200, brainfuck.compile(source, optimize) + '\n'))
 
 # ## Start server

@@ -371,6 +371,7 @@ fun = () ->\n"
 
   return js
 
+# Labels for optimized commands
 INC_POINTER_N = 'INC_POINTER_N'
 DEC_POINTER_N = 'DEC_POINTER_N'
 INC_BYTE_N = 'INC_BYTE_N'
@@ -437,7 +438,7 @@ optimize = (tree) ->
   # Fuse Increments/Decrements
   optimizedTree = fuse tree
 
-  return tree
+  return optimizedTree
 
 # Pretty printer
 prettyPrint = (tree) ->
