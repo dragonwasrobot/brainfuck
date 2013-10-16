@@ -235,17 +235,17 @@ evaluate = (tree) ->
   cells = (0 for i in [0...tapeSize])
 
   commands = [ INC_POINTER, DEC_POINTER, INC_BYTE, DEC_BYTE,
-    OUTPUT_BYTE, INPUT_BYTE ]
+    OUTPUT_BYTE, INPUT_BYTE,
+    # Optimized commands
+    INC_POINTER_N, DEC_POINTER_N, INC_BYTE_N, DEC_BYTE_N ]
 
   isCommand = (node) -> node.value in commands
   isBlock = (node) -> node.value is BLOCK
 
   evaluateCommand = (command) ->
-    log "{ value: #{getCommandValue(command)},\n
-  row: #{getCommandRow(command)},\n
-  column: #{getCommandColumn(command)} }"
     switch getCommandValue(command)
 
+      # Normal Commands
       when INC_POINTER
         if pointer is tapeSize
           throw "Pointer ran off tape, to the right, while evaluating:
@@ -276,6 +276,35 @@ evaluate = (tree) ->
       when INPUT_BYTE
         cells[pointer] = input()
 
+      # Optimized Commands
+      when INC_POINTER_N
+        pointerIncValue = command.count
+        pointer += pointerIncValue
+        if pointer > tapeSize
+          throw "Pointer ran off tape, to the right, while evaluating:
+#{getCommandRow(command)}:#{getCommandColumn(command)}."
+
+      when DEC_POINTER_N
+        pointerDecValue = command.count
+        pointer -= pointerDecValue
+        if pointer < 0
+            throw "Pointer ran off tape, to the left, while evaluating:
+#{getCommandRow(command)}:#{getCommandColumn(command)}."
+
+      when INC_BYTE_N
+        cellIncValue = command.count
+        cells[pointer] += cellIncValue
+        if cells[pointer] > cellsize
+          throw "Integer overflow while evaluating:
+#{getCommandRow(command)}:#{getCommandColumn(command)}."
+
+      when DEC_BYTE_N
+        cellDecValue = command.count
+        cells[pointer] -= cellDecValue
+        if cells[pointer] < 0
+          throw "Integer underflow while evaluating:
+#{getCommandRow(command)}:#{getCommandColumn(command)}."
+
   evaluateBlock = (block) ->
     for child in getBlockChildren(block)
       if isCommand(child) then evaluateCommand(child)
@@ -285,7 +314,7 @@ evaluate = (tree) ->
 
   return outputBuffer
 
-# (ast : tree String) -> String (CoffeeScript function)
+# (ast : tree String) -> String (CoffeeScript)
 compileToCoffeeScript = (tree) ->
   js = "# Compiled Brainfuck code:\n
 cells = (0 for i in [0...#{tapeSize}])\n
@@ -331,30 +360,147 @@ fun = () ->\n"
   compileBlock(0, tree)
 
   addString(0, "fun()")
-  console.log js
 
   fs.writeFile("output.coffee", js, (err) ->
-    if err then console.log err
-    else console.log "output file saved")
+    if err then log err
+    else log "output file saved")
 
   return js
+
+INC_POINTER_N = 'INC_POINTER_N'
+DEC_POINTER_N = 'DEC_POINTER_N'
+INC_BYTE_N = 'INC_BYTE_N'
+DEC_BYTE_N = 'DEC_BYTE_N'
+
+# (ast : tree String) -> (ast : tree String)
+optimizeToMetaBrainFuck = (tree) ->
+
+  # Helper functions
+  isBlock = (node) -> node.value is BLOCK
+
+  # Fuse higher order function
+  fuseValue = (commands, oldValue, newValue) ->
+    command = head(commands)
+    row = command.row
+    column = command.column
+    count = 0
+
+    while command?.value is oldValue
+      count++
+      commands = tail(commands)
+      command = head(commands)
+
+    node = {
+      'value' : newValue,
+      'count' : count,
+      'row' : row,
+      'column' : column
+    }
+
+    return [node].concat(commands)
+
+  fuseIncrementPointers = (commands) ->
+    fuseValue(commands, INC_POINTER, INC_POINTER_N)
+  fuseDecrementPointers = (commands) ->
+    fuseValue(commands, DEC_POINTER, DEC_POINTER_N)
+  fuseIncrementBytes = (commands) ->
+    fuseValue(commands, INC_BYTE, INC_BYTE_N)
+  fuseDecrementBytes = (commands) ->
+    fuseValue(commands, DEC_BYTE, DEC_BYTE_N)
+
+  # Actual fuse function
+  fuse = (tree) ->
+
+    optimizeCommands = (commands) ->
+      if commands.length is 0 then return []
+      command = head(commands)
+
+      if isBlock(command)
+        command.children = optimizeCommands(command.children)
+        return [command].concat(optimizeCommands(tail(commands)))
+
+      switch command.value
+        when INC_POINTER then return optimizeCommands(fuseIncrementPointers(commands))
+        when DEC_POINTER then return optimizeCommands(fuseDecrementPointers(commands))
+        when INC_BYTE then return optimizeCommands(fuseIncrementBytes(commands))
+        when DEC_BYTE then return optimizeCommands(fuseDecrementBytes(commands))
+
+      return [command].concat(optimizeCommands(tail(commands)))
+
+    tree.children = optimizeCommands(tree.children)
+    return tree
+
+  # Fuse Increments/Decrements
+  optimizedTree = fuse tree
+
+  return tree
+
+# Pretty printer
+prettyPrint = (tree) -> # todo
 
 # # Helper functions
 head = (list) -> list[0]
 tail = (list) -> list[1..]
 
-debug = false
+debug = true
 log = (string) -> if debug then console.log string
 
 # # Main
 
 interpret = (source) ->
-  console.log source
-  evaluate(parse(tokenize(source)))
+  log "-*- Source -*-"
+  log source
+
+  tokens = tokenize(source)
+  log "-*- Tokens -*-"
+  log tokens
+
+  ast = parse(tokens)
+  log "-*- Abstract Syntax Tree -*-"
+  log ast
+
+  result = evaluate(ast)
+  log "-*- Result -*-"
+  log result
+  return result
 
 compile = (source) ->
-  console.log source
-  compileToCoffeeScript(parse(tokenize(source)))
+  log "-*- Source -*-"
+  log source
+
+  tokens = tokenize(source)
+  log "-*- Tokens -*-"
+  log tokens
+
+  ast = parse(tokens)
+  log "-*- Abstract Syntax Tree -*-"
+  log ast
+
+  result = compileToCoffeeScript(ast)
+  log "-*- Result -*-"
+  log result
+  return result
+
+optimize = (source) ->
+  log "-*- Source -*-"
+  log source
+
+  tokens = tokenize(source)
+  log "-*- Tokens -*-"
+  log tokens
+
+  ast = parse(tokens)
+  log "-*- Abstract Syntax Tree -*-"
+  log ast
+
+  optimizedAst = optimizeToMetaBrainFuck(ast)
+  log "-*- Optimized Abstract Syntax Tree -*-"
+  log optimizedAst
+
+  result = evaluate(optimizedAst)
+  log "-*- Result -*-"
+  log result
+  return result
 
 # We presume no one in their right mind would want to type brainfuck directly
 # into the interpreter, but rather specify the path of a file to execute.
@@ -382,3 +528,4 @@ compile = (source) ->
 # ## Exports
 exports.interpret = interpret
 exports.compile = compile
+exports.optimize = optimize

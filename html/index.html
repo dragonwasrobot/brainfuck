@@ -19,6 +19,14 @@
           alert(data);
         });
       };
+
+      var optimize = function() {
+        var code = document.getElementById('codeInput').value;
+        var url = "optimize/" + encodeURIComponent(code);
+        $.get(url, function (data) {
+          alert(data);
+        });
+      };
     </script>
   </head>
   <body>
@@ -47,5 +55,6 @@
 > .                     print '\n'</textarea>
     <button type="submit" onClick="interpret()">Interpret</button>
     <button type="submit" onClick="compile()">Compile</button>
+    <button type="submit" onClick="optimize()">Optimize</button>
   </body>
 </html>

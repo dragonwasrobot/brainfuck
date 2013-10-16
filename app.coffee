@@ -18,6 +18,10 @@ app.get('/compile/:source', (request, response) ->
   source = request.params.source
   response.send(200, brainfuck.compile(source) + '\n'))
 
+app.get('/optimize/:source', (request, response) ->
+    source = request.params.source
+    response.send(200, brainfuck.optimize(source) + '\n'))
+
 # ## Start server
 app.listen 8000
 console.log "Server listening on port 8000"
