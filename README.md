@@ -21,7 +21,7 @@ execution of brainfuck programs, up and running in the not-too-distant future.
 
 ## Install
 
-Run `make install` followed by `coffee brainfuck`.
+Run `make install` followed by `coffee brainfuck.coffee`.
 
 ## Commands
 
@@ -33,3 +33,15 @@ Run `make install` followed by `coffee brainfuck`.
 - `,` prompts the user for a one byte input
 - `[` jumps to the next `]` if the byte at the data pointer is zero
 - `]` jumps to the previous `[` if the byte at the data pointer is nonzero
+
+## TODO
+
+- Cleanup:
+  - Remove Makefile (use npm install)
+  - Check code style (add some analysis tools and refactor)
+  - ????
+  - PROFIT
+- Enhancements:
+  - Finish optimizations
+  - BF -> C compiler?
+  - BF/C -> CHIP-8 bytecode compiler?

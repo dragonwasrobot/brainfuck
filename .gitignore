@@ -1,10 +1,14 @@
 # dot-gitignore
 
-# OS X crap
-.DS_Store
-
-# Library
-node_modules/
+# Compiled
+dist
 
 # Documentation
-docs/
+docs
+
+# Modules
+node_modules
+app/bower_components
+
+# OS/X Garbage
+.DS_Store
