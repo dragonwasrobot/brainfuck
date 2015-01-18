@@ -15,13 +15,14 @@ execution of brainfuck programs, up and running in the not-too-distant future.
 ## General
 - **Author:** Peter Urbak, peter@dragonwasrobot.com
 - **Created:** 2013-09-16
-- **Last Modified:** 2013-09-29
+- **Last Modified:** 2015-01-18
 - **URL:** https://github.com/dragonwasrobot/brainfuck
 - **License:** MIT License
 
 ## Install
 
-Run `make install` followed by `coffee brainfuck.coffee`.
+**TODO: Note that the current pushed version is slightly broken due to ongoing
+  refactoring.**
 
 ## Commands
 
@@ -37,11 +38,8 @@ Run `make install` followed by `coffee brainfuck.coffee`.
 ## TODO
 
 - Cleanup:
-  - Remove Makefile (use npm install)
-  - Check code style (add some analysis tools and refactor)
-  - ????
-  - PROFIT
+  - Finish refactoring/restructuring.
 - Enhancements:
-  - Finish optimizations
+  - Finish optimizations.
   - BF -> C compiler?
   - BF/C -> CHIP-8 bytecode compiler?
