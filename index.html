@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Brainfuck Interpreter</title>
+    <link rel="stylesheet"
+          type="text/css"
+          href="resources/css/style.css"
+          media="screen">
+  </head>
+  <body>
+    <h1>Brainfuck Interpreter</h1>
+    <div id="elm-area"></div>
+    <script src="elm.js"></script>
+    <script>
+     var node = document.getElementById('elm-area');
+     var app = Elm.Main.embed(node);
+
+     /* Old code */
+     var interpret = function() {
+         var code = document.getElementById('codeInput').value;
+         var checked = document.getElementById('optimizeCheckbox').checked;
+         var url = "interpret/" + checked + "/ " + encodeURIComponent(code);
+         $.get(url, function (result) {
+             outputArea = document.getElementById('codeOutput');
+             outputArea.value = result;
+         });
+         // app.ports.interpret.send(code);
+     };
+
+     var compile = function() {
+         var code = document.getElementById('codeInput').value;
+         var checked = document.getElementById('optimizeCheckbox').checked;
+         var url = "compile/" + checked + "/" + encodeURIComponent(code);
+         $.get(url, function (result) {
+             outputArea = document.getElementById('codeOutput');
+             outputArea.value = result;
+         });
+         // app.ports.compile.send(code);
+     };
+    </script>
+
+    <textarea rows="22" cols="60" id="codeInput">Print 'Hello world!'
++++++ +++++             initialize counter (cell #0) to 10
+[                       use loop to set the next four cells to 70/100/30/10
+    > +++++ ++              add  7 to cell #1
+    > +++++ +++++           add 10 to cell #2
+    > +++                   add  3 to cell #3
+    > +                     add  1 to cell #4
+    <<<< -                  decrement counter (cell #0)
+]
+> ++ .                  print 'H'
+> + .                   print 'e'
++++++ ++ .              print 'l'
+.                       print 'l'
++++ .                   print 'o'
+> ++ .                  print ' '
+<< +++++ +++++ +++++ .  print 'W'
+> .                     print 'o'
++++ .                   print 'r'
+----- - .               print 'l'
+----- --- .             print 'd'
+> + .                   print '!'
+> .                     print '\n'</textarea>
+    <button type="submit" onClick="interpret()">Interpret</button>
+    <button type="submit" onClick="compile()">Compile</button>
+    <input type="checkbox" name="optimize" id="optimizeCheckbox">
+      Optimize
+    </input>
+    <textarea rows="20" cols="40" id="codeOutput">output field</textarea>
+
+  </body>
+</html>
