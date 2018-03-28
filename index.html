@@ -15,28 +15,21 @@
      var node = document.getElementById('elm-area');
      var app = Elm.Main.embed(node);
 
-     /* Old code */
+     var outputBuffer = '';
+
      var interpret = function() {
          var code = document.getElementById('codeInput').value;
-         var checked = document.getElementById('optimizeCheckbox').checked;
-         var url = "interpret/" + checked + "/ " + encodeURIComponent(code);
-         $.get(url, function (result) {
-             outputArea = document.getElementById('codeOutput');
-             outputArea.value = result;
-         });
-         // app.ports.interpret.send(code);
+         app.ports.evaluate.send(code);
      };
+     window.interpret = interpret;
 
-     var compile = function() {
-         var code = document.getElementById('codeInput').value;
-         var checked = document.getElementById('optimizeCheckbox').checked;
-         var url = "compile/" + checked + "/" + encodeURIComponent(code);
-         $.get(url, function (result) {
-             outputArea = document.getElementById('codeOutput');
-             outputArea.value = result;
-         });
-         // app.ports.compile.send(code);
+     var outputByte = function(byte) {
+         var char = String.fromCharCode(byte);
+         var outputArea = document.getElementById('codeOutput');
+         var outputValue = outputArea.value + "" + char;
+         outputArea.value = outputValue;
      };
+     app.ports.outputByte.subscribe(outputByte);
     </script>
 
     <textarea rows="22" cols="60" id="codeInput">Print 'Hello world!'
@@ -61,12 +54,8 @@
 ----- --- .             print 'd'
 > + .                   print '!'
 > .                     print '\n'</textarea>
-    <button type="submit" onClick="interpret()">Interpret</button>
-    <button type="submit" onClick="compile()">Compile</button>
-    <input type="checkbox" name="optimize" id="optimizeCheckbox">
-      Optimize
-    </input>
-    <textarea rows="20" cols="40" id="codeOutput">output field</textarea>
+    <button type="submit" onClick="interpret()">Evaluate</button>
+    <textarea rows="20" cols="40" id="codeOutput"></textarea>
 
   </body>
 </html>
