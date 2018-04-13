@@ -1,12 +1,10 @@
-Brainfuck
-=========
+# Brainfuck
 
-A brainfuck interpreter written in CoffeeScript.
-
-The goal of the project is to write an interpreter which is just sophisticated
-enough to be interesting to study while still being easy to understand.
+This is an implementation of a basic brainfuck interpreter written in Elm.
 
 ## Commands
+
+The brainfuck language consists of the following eight commands:
 
 - `>` increments the data pointer
 - `<` decrements the data pointer
