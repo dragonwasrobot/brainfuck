@@ -1,6 +1,6 @@
 # Brainfuck
 
-This is an implementation of a brainfuck interpreter written in Elm.
+This is an implementation of a basic brainfuck interpreter written in Elm.
 
 ## Commands
 
