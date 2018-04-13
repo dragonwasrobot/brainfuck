@@ -4716,8 +4716,7 @@ var _dragonwasrobot$brainfuck$Parser$parse = function (tokens) {
 		})('Finished parsing too early!');
 };
 
-var _dragonwasrobot$brainfuck$Model$initialProgram = 'Print \'Hello world!\'\n+++++ +++++             initialize counter (cell #0) to 10\n[                       use loop to set the next four cells to 70/100/30/10\n> +++++ ++              add  7 to cell #1\n> +++++ +++++           add 10 to cell #2\n> +++                   add  3 to cell #3\n> +                     add  1 to cell #4\n<<<< -                  decrement counter (cell #0)\n]\n> ++ .                  print \'H\'\n> + .                   print \'e\'\n+++++ ++ .              print \'l\'\n.                       print \'l\'\n+++ .                   print \'o\'\n> ++ .                  print \' \'\n<< +++++ +++++ +++++ .  print \'W\'\n> .                     print \'o\'\n+++ .                   print \'r\'\n----- - .               print \'l\'\n----- --- .             print \'d\'\n> + .                   print \'!\'\n> .                     print \'\n\'';
-var _dragonwasrobot$brainfuck$Model$initVirtualMachine = {
+var _dragonwasrobot$brainfuck$VirtualMachine$initVirtualMachine = {
 	pointer: 0,
 	cells: A2(
 		_elm_lang$core$Array$initialize,
@@ -4727,14 +4726,9 @@ var _dragonwasrobot$brainfuck$Model$initVirtualMachine = {
 		}),
 	output: ''
 };
-var _dragonwasrobot$brainfuck$Model$initModel = {vm: _dragonwasrobot$brainfuck$Model$initVirtualMachine, programCode: _dragonwasrobot$brainfuck$Model$initialProgram};
-var _dragonwasrobot$brainfuck$Model$VirtualMachine = F3(
+var _dragonwasrobot$brainfuck$VirtualMachine$VirtualMachine = F3(
 	function (a, b, c) {
 		return {pointer: a, cells: b, output: c};
-	});
-var _dragonwasrobot$brainfuck$Model$Model = F2(
-	function (a, b) {
-		return {vm: a, programCode: b};
 	});
 
 var _dragonwasrobot$brainfuck$Evaluator$handleInputByte = function (vm) {
@@ -8516,14 +8510,34 @@ var _elm_lang$html$Html$summary = _elm_lang$html$Html$node('summary');
 var _elm_lang$html$Html$menuitem = _elm_lang$html$Html$node('menuitem');
 var _elm_lang$html$Html$menu = _elm_lang$html$Html$node('menu');
 
+var _dragonwasrobot$brainfuck$Model$initialProgram = 'Print \'Hello world!\'\n+++++ +++++             initialize counter (cell #0) to 10\n[                       use loop to set the next four cells to 70/100/30/10\n> +++++ ++              add  7 to cell #1\n> +++++ +++++           add 10 to cell #2\n> +++                   add  3 to cell #3\n> +                     add  1 to cell #4\n<<<< -                  decrement counter (cell #0)\n]\n> ++ .                  print \'H\'\n> + .                   print \'e\'\n+++++ ++ .              print \'l\'\n.                       print \'l\'\n+++ .                   print \'o\'\n> ++ .                  print \' \'\n<< +++++ +++++ +++++ .  print \'W\'\n> .                     print \'o\'\n+++ .                   print \'r\'\n----- - .               print \'l\'\n----- --- .             print \'d\'\n> + .                   print \'!\'\n> .                     print \'\n\'';
+var _dragonwasrobot$brainfuck$Model$initModel = {vm: _dragonwasrobot$brainfuck$VirtualMachine$initVirtualMachine, programCode: _dragonwasrobot$brainfuck$Model$initialProgram};
+var _dragonwasrobot$brainfuck$Model$Model = F2(
+	function (a, b) {
+		return {vm: a, programCode: b};
+	});
+
+var _dragonwasrobot$brainfuck$Msg$SetCode = function (a) {
+	return {ctor: 'SetCode', _0: a};
+};
 var _dragonwasrobot$brainfuck$Msg$Evaluate = {ctor: 'Evaluate'};
 
+var _dragonwasrobot$brainfuck$Update$setCode = F2(
+	function (code, model) {
+		return {
+			ctor: '_Tuple2',
+			_0: _elm_lang$core$Native_Utils.update(
+				model,
+				{programCode: code}),
+			_1: _elm_lang$core$Platform_Cmd$none
+		};
+	});
 var _dragonwasrobot$brainfuck$Update$evaluateProgram = function (model) {
-	var vm = model.vm;
+	var freshVm = _dragonwasrobot$brainfuck$VirtualMachine$initVirtualMachine;
 	var program = model.programCode;
 	var newVm = A2(
 		_dragonwasrobot$brainfuck$Evaluator$evaluate,
-		vm,
+		freshVm,
 		_dragonwasrobot$brainfuck$Parser$parse(
 			_dragonwasrobot$brainfuck$Lexer$tokenize(program)));
 	var newModel = _elm_lang$core$Native_Utils.update(
@@ -8534,7 +8548,11 @@ var _dragonwasrobot$brainfuck$Update$evaluateProgram = function (model) {
 var _dragonwasrobot$brainfuck$Update$update = F2(
 	function (msg, model) {
 		var _p0 = msg;
-		return _dragonwasrobot$brainfuck$Update$evaluateProgram(model);
+		if (_p0.ctor === 'Evaluate') {
+			return _dragonwasrobot$brainfuck$Update$evaluateProgram(model);
+		} else {
+			return A2(_dragonwasrobot$brainfuck$Update$setCode, _p0._0, model);
+		}
 	});
 
 var _elm_lang$html$Html_Attributes$map = _elm_lang$virtual_dom$VirtualDom$mapProperty;
@@ -9033,7 +9051,11 @@ var _dragonwasrobot$brainfuck$View$view = function (model) {
 								_1: {
 									ctor: '::',
 									_0: _elm_lang$html$Html_Attributes$cols(60),
-									_1: {ctor: '[]'}
+									_1: {
+										ctor: '::',
+										_0: _elm_lang$html$Html_Events$onInput(_dragonwasrobot$brainfuck$Msg$SetCode),
+										_1: {ctor: '[]'}
+									}
 								}
 							}
 						},

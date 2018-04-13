@@ -4,7 +4,7 @@ import Array exposing (Array)
 import Ascii
 import Lexer exposing (Symbol(..))
 import Parser exposing (Command, Block, AbstractSyntaxTree(..))
-import Model exposing (VirtualMachine)
+import VirtualMachine exposing (VirtualMachine)
 
 
 evaluate : VirtualMachine -> AbstractSyntaxTree -> VirtualMachine

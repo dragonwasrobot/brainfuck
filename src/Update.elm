@@ -5,6 +5,7 @@ import Msg exposing (Msg(..))
 import Lexer exposing (tokenize)
 import Parser exposing (parse)
 import Evaluator exposing (evaluate)
+import VirtualMachine exposing (initVirtualMachine)
 
 
 evaluateProgram : Model -> ( Model, Cmd Msg )
@@ -13,14 +14,14 @@ evaluateProgram model =
         program =
             model.programCode
 
-        vm =
-            model.vm
+        freshVm =
+            initVirtualMachine
 
         newVm =
             program
                 |> tokenize
                 |> parse
-                |> evaluate vm
+                |> evaluate freshVm
 
         newModel =
             { model | vm = newVm }
@@ -28,8 +29,16 @@ evaluateProgram model =
         ( newModel, Cmd.none )
 
 
+setCode : String -> Model -> ( Model, Cmd Msg )
+setCode code model =
+    ( { model | programCode = code }, Cmd.none )
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Evaluate ->
             evaluateProgram model
+
+        SetCode code ->
+            setCode code model
