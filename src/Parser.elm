@@ -39,7 +39,7 @@ parse : List Token -> AbstractSyntaxTree
 parse tokens =
     let
         root =
-            Node <|
+            Node
                 { position = { row = 0, column = 0 }
                 , children = []
                 }
@@ -56,7 +56,10 @@ parse tokens =
 {-| `parseTokens` takes a list of tokens and returns an abstract syntax
 tree of the program.
 -}
-parseTokens : List Token -> AbstractSyntaxTree -> ( AbstractSyntaxTree, List Token )
+parseTokens :
+    List Token
+    -> AbstractSyntaxTree
+    -> ( AbstractSyntaxTree, List Token )
 parseTokens tokensList node =
     case tokensList of
         [] ->
@@ -87,7 +90,7 @@ parseStartBlock token tokens node =
         Node block ->
             let
                 childBlock =
-                    Node <|
+                    Node
                         { children = []
                         , position = token.position
                         }
@@ -125,7 +128,7 @@ parseCommand token tokens node =
         Node block ->
             let
                 command =
-                    Leaf <|
+                    Leaf
                         { value = token.value
                         , position = token.position
                         }

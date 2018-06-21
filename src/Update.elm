@@ -11,17 +11,11 @@ import VirtualMachine exposing (initVirtualMachine)
 evaluateProgram : Model -> ( Model, Cmd Msg )
 evaluateProgram model =
     let
-        program =
-            model.programCode
-
-        freshVm =
-            initVirtualMachine
-
         newVm =
-            program
+            model.programCode
                 |> tokenize
                 |> parse
-                |> evaluate freshVm
+                |> evaluate initVirtualMachine
 
         newModel =
             { model | vm = newVm }

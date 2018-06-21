@@ -1,16 +1,19 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Brainfuck Interpreter</title>
-    <link rel="stylesheet" type="text/css" href="style.css" media="screen">
-  </head>
-  <body>
-    <h1>Brainfuck Interpreter</h1>
-    <div id="elm-area"></div>
-    <script src="elm.js"></script>
-    <script>
-     var node = document.getElementById('elm-area');
-     var app = Elm.Main.embed(node);
-    </script>
-  </body>
+    <head>
+        <title>Brainfuck interpreter</title>
+        <link rel="stylesheet"
+              type="text/css"
+              href="style.css"
+              media="screen">
+    </head>
+
+    <body>
+        <div id="elm-area"></div>
+        <script src="elm.js"></script>
+        <script>
+         var node = document.getElementById('elm-area');
+         var app = Elm.Main.embed(node);
+        </script>
+    </body>
 </html>

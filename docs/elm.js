@@ -4617,8 +4617,8 @@ var _dragonwasrobot$brainfuck$Parser$parseCommand = F3(
 			return _elm_lang$core$Native_Utils.crashCase(
 				'Parser',
 				{
-					start: {line: 121, column: 5},
-					end: {line: 139, column: 43}
+					start: {line: 124, column: 5},
+					end: {line: 142, column: 43}
 				},
 				_p0)('Enclosing block was command!');
 		} else {
@@ -4670,8 +4670,8 @@ var _dragonwasrobot$brainfuck$Parser$parseStartBlock = F3(
 			return _elm_lang$core$Native_Utils.crashCase(
 				'Parser',
 				{
-					start: {line: 83, column: 5},
-					end: {line: 104, column: 52}
+					start: {line: 86, column: 5},
+					end: {line: 107, column: 52}
 				},
 				_p7)('Unexpected command!');
 		} else {
@@ -8533,13 +8533,11 @@ var _dragonwasrobot$brainfuck$Update$setCode = F2(
 		};
 	});
 var _dragonwasrobot$brainfuck$Update$evaluateProgram = function (model) {
-	var freshVm = _dragonwasrobot$brainfuck$VirtualMachine$initVirtualMachine;
-	var program = model.programCode;
 	var newVm = A2(
 		_dragonwasrobot$brainfuck$Evaluator$evaluate,
-		freshVm,
+		_dragonwasrobot$brainfuck$VirtualMachine$initVirtualMachine,
 		_dragonwasrobot$brainfuck$Parser$parse(
-			_dragonwasrobot$brainfuck$Lexer$tokenize(program)));
+			_dragonwasrobot$brainfuck$Lexer$tokenize(model.programCode)));
 	var newModel = _elm_lang$core$Native_Utils.update(
 		model,
 		{vm: newVm});
@@ -9020,8 +9018,104 @@ var _elm_lang$html$Html_Events$Options = F2(
 		return {stopPropagation: a, preventDefault: b};
 	});
 
+var _dragonwasrobot$brainfuck$View$viewButtons = function (model) {
+	return A2(
+		_elm_lang$html$Html$div,
+		{
+			ctor: '::',
+			_0: _elm_lang$html$Html_Attributes$id('button-area'),
+			_1: {ctor: '[]'}
+		},
+		{
+			ctor: '::',
+			_0: A2(
+				_elm_lang$html$Html$button,
+				{
+					ctor: '::',
+					_0: _elm_lang$html$Html_Attributes$type_('submit'),
+					_1: {
+						ctor: '::',
+						_0: _elm_lang$html$Html_Events$onClick(_dragonwasrobot$brainfuck$Msg$Evaluate),
+						_1: {ctor: '[]'}
+					}
+				},
+				{
+					ctor: '::',
+					_0: _elm_lang$html$Html$text('Evaluate'),
+					_1: {ctor: '[]'}
+				}),
+			_1: {ctor: '[]'}
+		});
+};
+var _dragonwasrobot$brainfuck$View$viewInterpreter = function (model) {
+	return A2(
+		_elm_lang$html$Html$div,
+		{
+			ctor: '::',
+			_0: _elm_lang$html$Html_Attributes$id('text-areas'),
+			_1: {ctor: '[]'}
+		},
+		{
+			ctor: '::',
+			_0: A2(
+				_elm_lang$html$Html$textarea,
+				{
+					ctor: '::',
+					_0: _elm_lang$html$Html_Attributes$id('codeInput'),
+					_1: {
+						ctor: '::',
+						_0: _elm_lang$html$Html_Attributes$rows(25),
+						_1: {
+							ctor: '::',
+							_0: _elm_lang$html$Html_Attributes$cols(60),
+							_1: {
+								ctor: '::',
+								_0: _elm_lang$html$Html_Events$onInput(_dragonwasrobot$brainfuck$Msg$SetCode),
+								_1: {ctor: '[]'}
+							}
+						}
+					}
+				},
+				{
+					ctor: '::',
+					_0: _elm_lang$html$Html$text(model.programCode),
+					_1: {ctor: '[]'}
+				}),
+			_1: {
+				ctor: '::',
+				_0: A2(
+					_elm_lang$html$Html$textarea,
+					{
+						ctor: '::',
+						_0: _elm_lang$html$Html_Attributes$id('codeOutput'),
+						_1: {
+							ctor: '::',
+							_0: _elm_lang$html$Html_Attributes$rows(25),
+							_1: {
+								ctor: '::',
+								_0: _elm_lang$html$Html_Attributes$cols(40),
+								_1: {ctor: '[]'}
+							}
+						}
+					},
+					{
+						ctor: '::',
+						_0: _elm_lang$html$Html$text(model.vm.output),
+						_1: {ctor: '[]'}
+					}),
+				_1: {ctor: '[]'}
+			}
+		});
+};
+var _dragonwasrobot$brainfuck$View$viewHeader = A2(
+	_elm_lang$html$Html$h1,
+	{ctor: '[]'},
+	{
+		ctor: '::',
+		_0: _elm_lang$html$Html$text('Brainfuck interpreter'),
+		_1: {ctor: '[]'}
+	});
 var _dragonwasrobot$brainfuck$View$view = function (model) {
-	var vm = model.vm;
 	return A2(
 		_elm_lang$html$Html$div,
 		{
@@ -9031,94 +9125,15 @@ var _dragonwasrobot$brainfuck$View$view = function (model) {
 		},
 		{
 			ctor: '::',
-			_0: A2(
-				_elm_lang$html$Html$div,
-				{
-					ctor: '::',
-					_0: _elm_lang$html$Html_Attributes$id('text-areas'),
-					_1: {ctor: '[]'}
-				},
-				{
-					ctor: '::',
-					_0: A2(
-						_elm_lang$html$Html$textarea,
-						{
-							ctor: '::',
-							_0: _elm_lang$html$Html_Attributes$id('codeInput'),
-							_1: {
-								ctor: '::',
-								_0: _elm_lang$html$Html_Attributes$rows(25),
-								_1: {
-									ctor: '::',
-									_0: _elm_lang$html$Html_Attributes$cols(60),
-									_1: {
-										ctor: '::',
-										_0: _elm_lang$html$Html_Events$onInput(_dragonwasrobot$brainfuck$Msg$SetCode),
-										_1: {ctor: '[]'}
-									}
-								}
-							}
-						},
-						{
-							ctor: '::',
-							_0: _elm_lang$html$Html$text(model.programCode),
-							_1: {ctor: '[]'}
-						}),
-					_1: {
-						ctor: '::',
-						_0: A2(
-							_elm_lang$html$Html$textarea,
-							{
-								ctor: '::',
-								_0: _elm_lang$html$Html_Attributes$id('codeOutput'),
-								_1: {
-									ctor: '::',
-									_0: _elm_lang$html$Html_Attributes$rows(25),
-									_1: {
-										ctor: '::',
-										_0: _elm_lang$html$Html_Attributes$cols(40),
-										_1: {ctor: '[]'}
-									}
-								}
-							},
-							{
-								ctor: '::',
-								_0: _elm_lang$html$Html$text(vm.output),
-								_1: {ctor: '[]'}
-							}),
-						_1: {ctor: '[]'}
-					}
-				}),
+			_0: _dragonwasrobot$brainfuck$View$viewHeader,
 			_1: {
 				ctor: '::',
-				_0: A2(
-					_elm_lang$html$Html$div,
-					{
-						ctor: '::',
-						_0: _elm_lang$html$Html_Attributes$id('button-area'),
-						_1: {ctor: '[]'}
-					},
-					{
-						ctor: '::',
-						_0: A2(
-							_elm_lang$html$Html$button,
-							{
-								ctor: '::',
-								_0: _elm_lang$html$Html_Attributes$type_('submit'),
-								_1: {
-									ctor: '::',
-									_0: _elm_lang$html$Html_Events$onClick(_dragonwasrobot$brainfuck$Msg$Evaluate),
-									_1: {ctor: '[]'}
-								}
-							},
-							{
-								ctor: '::',
-								_0: _elm_lang$html$Html$text('Evaluate'),
-								_1: {ctor: '[]'}
-							}),
-						_1: {ctor: '[]'}
-					}),
-				_1: {ctor: '[]'}
+				_0: _dragonwasrobot$brainfuck$View$viewInterpreter(model),
+				_1: {
+					ctor: '::',
+					_0: _dragonwasrobot$brainfuck$View$viewButtons(model),
+					_1: {ctor: '[]'}
+				}
 			}
 		});
 };
