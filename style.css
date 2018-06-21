@@ -1,0 +1,41 @@
+/* style.css */
+
+body {
+  background-color: rgb(38, 38, 38);
+}
+
+#content {
+  margin: 0 auto 0 auto;
+  text-align: center;
+}
+
+h1 {
+  padding-top: 1em;
+  text-align: center;
+  font-family: courier new;
+  font-size: 2em;
+  font-weight: normal;
+  color: #B5E852;
+}
+
+button {
+  margin-top: 0.50em;
+  border-color: #B5E852;
+  border-style: solid;
+  border-radius: 0.125em;
+  font-family: 'courier new';
+  font-size: 2em;
+  background-color: #262626;
+  color: #B5E852;
+}
+
+textarea {
+  margin-left: 0.50em;
+  margin-right: 0.50em;
+  border: 1px solid #B5E852;
+  font-family: courier new;
+  font-size: 1em;
+  font-weight: normal;
+  background-color: rgb(38, 38, 38);
+  color: #B5E852;
+}
