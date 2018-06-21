@@ -33,6 +33,7 @@ textarea {
   margin-left: 0.50em;
   margin-right: 0.50em;
   border: 1px solid #B5E852;
+  resize: none;
   font-family: courier new;
   font-size: 1em;
   font-weight: normal;
