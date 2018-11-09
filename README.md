@@ -17,6 +17,8 @@ The brainfuck language consists of the following eight commands:
 
 ## Installation
 
+**An online demo can be found here:** https://www.dragonwasrobot.com/brainfuck/
+
 Ensure you have Elm 0.19 installed. I personally recommend using asdf,
 https://github.com/asdf-vm/asdf, to handle version management of compilers.
 
