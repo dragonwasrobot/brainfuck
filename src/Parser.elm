@@ -1,6 +1,6 @@
-module Parser exposing (Command, Block, AbstractSyntaxTree(..), parse)
+module Parser exposing (AbstractSyntaxTree(..), Block, Command, parse)
 
-import Lexer exposing (Symbol(..), Position, Token)
+import Lexer exposing (Position, Symbol(..), Token)
 
 
 {-| The parser takes a sequence of tokens and constructs a parse tree, an
@@ -47,10 +47,11 @@ parse tokens =
         ( node, remainingTokens ) =
             parseTokens tokens root
     in
-        if List.isEmpty remainingTokens then
-            node
-        else
-            Debug.crash "Finished parsing too early!"
+    if List.isEmpty remainingTokens then
+        node
+
+    else
+        Debug.todo "Finished parsing too early!"
 
 
 {-| `parseTokens` takes a list of tokens and returns an abstract syntax
@@ -85,7 +86,7 @@ parseStartBlock :
 parseStartBlock token tokens node =
     case node of
         Leaf _ ->
-            Debug.crash "Unexpected command!"
+            Debug.todo "Unexpected command!"
 
         Node block ->
             let
@@ -104,7 +105,7 @@ parseStartBlock token tokens node =
                 newNode =
                     Node { block | children = newChildren }
             in
-                parseTokens remainingTokens newNode
+            parseTokens remainingTokens newNode
 
 
 parseEndBlock :
@@ -123,7 +124,7 @@ parseCommand :
 parseCommand token tokens node =
     case node of
         Leaf _ ->
-            Debug.crash "Enclosing block was command!"
+            Debug.todo "Enclosing block was command!"
 
         Node block ->
             let
@@ -139,4 +140,4 @@ parseCommand token tokens node =
                 newNode =
                     Node { block | children = newChildren }
             in
-                parseTokens tokens newNode
+            parseTokens tokens newNode

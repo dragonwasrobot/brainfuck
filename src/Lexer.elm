@@ -1,4 +1,4 @@
-module Lexer exposing (Symbol(..), Position, Token, tokenize)
+module Lexer exposing (Position, Symbol(..), Token, tokenize)
 
 {-| Converts a sequence of characters, the program representation, into a
 sequence of tokens.
@@ -106,40 +106,37 @@ tokenize program =
                 newPosition =
                     if char == '\n' then
                         { row = position.row + 1, column = 0 }
+
                     else
                         { row = position.row, column = position.column + 1 }
             in
-                case charToSymbol char of
-                    Just symbol ->
-                        let
-                            token =
-                                { value = symbol
-                                , position = position
-                                }
-                        in
-                            ( Just token, newPosition )
+            case charToSymbol char of
+                Just symbol ->
+                    let
+                        token =
+                            { value = symbol
+                            , position = position
+                            }
+                    in
+                    ( Just token, newPosition )
+
+                Nothing ->
+                    ( Nothing, newPosition )
+    in
+    program
+        |> String.toList
+        |> List.foldl
+            (\char ( tokens, pos ) ->
+                let
+                    ( maybeToken, newPos ) =
+                        tokenizeChar char pos
+                in
+                case maybeToken of
+                    Just token ->
+                        ( tokens ++ [ token ], newPos )
 
                     Nothing ->
-                        ( Nothing, newPosition )
-
-        tokenizeProgram : String -> List Token
-        tokenizeProgram program =
-            program
-                |> String.toList
-                |> List.foldl
-                    (\char ( tokens, pos ) ->
-                        let
-                            ( maybeToken, newPos ) =
-                                tokenizeChar char pos
-                        in
-                            case maybeToken of
-                                Just token ->
-                                    ( tokens ++ [ token ], newPos )
-
-                                Nothing ->
-                                    ( tokens, newPos )
-                    )
-                    ( [], initPos )
-                |> Tuple.first
-    in
-        tokenizeProgram program
+                        ( tokens, newPos )
+            )
+            ( [], initPos )
+        |> Tuple.first

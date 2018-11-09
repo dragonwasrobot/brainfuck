@@ -3,7 +3,7 @@ module Evaluator exposing (evaluate)
 import Array exposing (Array)
 import Ascii
 import Lexer exposing (Symbol(..))
-import Parser exposing (Command, Block, AbstractSyntaxTree(..))
+import Parser exposing (AbstractSyntaxTree(..), Block, Command)
 import VirtualMachine exposing (VirtualMachine)
 
 
@@ -19,28 +19,8 @@ evaluate vm node =
 
 evaluateBlock : Block -> VirtualMachine -> VirtualMachine
 evaluateBlock block vm =
-    let
-        evaluateChildBlock childBlock vm =
-            let
-                cells =
-                    vm.cells
-
-                pointer =
-                    vm.pointer
-
-                cellValue =
-                    cells |> Array.get pointer |> Maybe.withDefault 0
-            in
-                if cellValue > 0 then
-                    let
-                        newAcc =
-                            evaluateBlock childBlock vm
-                    in
-                        evaluateChildBlock childBlock newAcc
-                else
-                    vm
-    in
-        List.foldl
+    block.children
+        |> List.foldl
             (\child accVm ->
                 case child of
                     Leaf childCommand ->
@@ -50,7 +30,29 @@ evaluateBlock block vm =
                         evaluateChildBlock childBlock accVm
             )
             vm
-            block.children
+
+
+evaluateChildBlock : Block -> VirtualMachine -> VirtualMachine
+evaluateChildBlock childBlock vm =
+    let
+        cells =
+            vm.cells
+
+        pointer =
+            vm.pointer
+
+        cellValue =
+            cells |> Array.get pointer |> Maybe.withDefault 0
+    in
+    if cellValue > 0 then
+        let
+            newAcc =
+                evaluateBlock childBlock vm
+        in
+        evaluateChildBlock childBlock newAcc
+
+    else
+        vm
 
 
 evaluateCommand : Command -> VirtualMachine -> VirtualMachine
@@ -75,10 +77,10 @@ evaluateCommand command vm =
             handleInputByte vm
 
         StartBlock ->
-            Debug.crash "Unexpected command!"
+            Debug.todo "Unexpected command!"
 
         EndBlock ->
-            Debug.crash "Unexpected command!"
+            Debug.todo "Unexpected command!"
 
 
 handleIncrementPointer : VirtualMachine -> VirtualMachine
@@ -93,10 +95,11 @@ handleIncrementPointer vm =
         newVm =
             { vm | pointer = newPointer }
     in
-        if newPointer > tapeSize then
-            Debug.crash "Pointer ran off tape (right)"
-        else
-            newVm
+    if newPointer > tapeSize then
+        Debug.todo "Pointer ran off tape (right)"
+
+    else
+        newVm
 
 
 handleDecrementPointer : VirtualMachine -> VirtualMachine
@@ -108,10 +111,11 @@ handleDecrementPointer vm =
         newVm =
             { vm | pointer = newPointer }
     in
-        if newPointer < 0 then
-            Debug.crash "Pointer ran off tape (left)"
-        else
-            newVm
+    if newPointer < 0 then
+        Debug.todo "Pointer ran off tape (left)"
+
+    else
+        newVm
 
 
 handleIncrementByte : VirtualMachine -> VirtualMachine
@@ -127,7 +131,7 @@ handleIncrementByte vm =
             vm.pointer
 
         oldCellValue =
-            (cells |> Array.get pointer |> Maybe.withDefault 0)
+            cells |> Array.get pointer |> Maybe.withDefault 0
 
         newCellValue =
             oldCellValue + 1
@@ -141,10 +145,11 @@ handleIncrementByte vm =
         newVm =
             { vm | cells = newCells }
     in
-        if newCellValue > cellSize then
-            Debug.crash "Integer overflow"
-        else
-            newVm
+    if newCellValue > cellSize then
+        Debug.todo "Integer overflow"
+
+    else
+        newVm
 
 
 handleDecrementByte : VirtualMachine -> VirtualMachine
@@ -157,7 +162,7 @@ handleDecrementByte vm =
             vm.pointer
 
         oldCellValue =
-            (cells |> Array.get pointer |> Maybe.withDefault 0)
+            cells |> Array.get pointer |> Maybe.withDefault 0
 
         newCellValue =
             oldCellValue - 1
@@ -171,10 +176,11 @@ handleDecrementByte vm =
         newVm =
             { vm | cells = newCells }
     in
-        if newCellValue < 0 then
-            Debug.crash "Integer underflow"
-        else
-            newVm
+    if newCellValue < 0 then
+        Debug.todo "Integer underflow"
+
+    else
+        newVm
 
 
 handleOutputByte : VirtualMachine -> VirtualMachine
@@ -194,7 +200,7 @@ handleOutputByte vm =
                 |> Array.get pointer
                 |> Maybe.withDefault 0
     in
-        outputByte cellValue vm
+    outputByte cellValue vm
 
 
 outputByte : Int -> VirtualMachine -> VirtualMachine
@@ -205,7 +211,7 @@ outputByte cellValue vm =
                 newOutput =
                     vm.output ++ String.fromChar char
             in
-                { vm | output = newOutput }
+            { vm | output = newOutput }
 
         Nothing ->
             vm
