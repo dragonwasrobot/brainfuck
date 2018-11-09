@@ -7,7 +7,7 @@ import Parser exposing (AbstractSyntaxTree(..), Block, Command)
 import VirtualMachine exposing (VirtualMachine)
 
 
-evaluate : VirtualMachine -> AbstractSyntaxTree -> VirtualMachine
+evaluate : VirtualMachine -> AbstractSyntaxTree -> Result String VirtualMachine
 evaluate vm node =
     case node of
         Node block ->
@@ -17,22 +17,22 @@ evaluate vm node =
             evaluateCommand command vm
 
 
-evaluateBlock : Block -> VirtualMachine -> VirtualMachine
+evaluateBlock : Block -> VirtualMachine -> Result String VirtualMachine
 evaluateBlock block vm =
     block.children
         |> List.foldl
             (\child accVm ->
                 case child of
                     Leaf childCommand ->
-                        evaluateCommand childCommand accVm
+                        Result.andThen (evaluateCommand childCommand) accVm
 
                     Node childBlock ->
-                        evaluateChildBlock childBlock accVm
+                        Result.andThen (evaluateChildBlock childBlock) accVm
             )
-            vm
+            (Ok vm)
 
 
-evaluateChildBlock : Block -> VirtualMachine -> VirtualMachine
+evaluateChildBlock : Block -> VirtualMachine -> Result String VirtualMachine
 evaluateChildBlock childBlock vm =
     let
         cells =
@@ -49,13 +49,14 @@ evaluateChildBlock childBlock vm =
             newAcc =
                 evaluateBlock childBlock vm
         in
-        evaluateChildBlock childBlock newAcc
+        newAcc
+            |> Result.andThen (evaluateChildBlock childBlock)
 
     else
-        vm
+        Ok vm
 
 
-evaluateCommand : Command -> VirtualMachine -> VirtualMachine
+evaluateCommand : Command -> VirtualMachine -> Result String VirtualMachine
 evaluateCommand command vm =
     case command.value of
         IncrementPointer ->
@@ -77,13 +78,13 @@ evaluateCommand command vm =
             handleInputByte vm
 
         StartBlock ->
-            Debug.todo "Unexpected command!"
+            Err "Unexpected command: start block!"
 
         EndBlock ->
-            Debug.todo "Unexpected command!"
+            Err "Unexpected command: end block!"
 
 
-handleIncrementPointer : VirtualMachine -> VirtualMachine
+handleIncrementPointer : VirtualMachine -> Result String VirtualMachine
 handleIncrementPointer vm =
     let
         tapeSize =
@@ -96,13 +97,13 @@ handleIncrementPointer vm =
             { vm | pointer = newPointer }
     in
     if newPointer > tapeSize then
-        Debug.todo "Pointer ran off tape (right)"
+        Err "Pointer ran off tape (right)"
 
     else
-        newVm
+        Ok newVm
 
 
-handleDecrementPointer : VirtualMachine -> VirtualMachine
+handleDecrementPointer : VirtualMachine -> Result String VirtualMachine
 handleDecrementPointer vm =
     let
         newPointer =
@@ -112,13 +113,13 @@ handleDecrementPointer vm =
             { vm | pointer = newPointer }
     in
     if newPointer < 0 then
-        Debug.todo "Pointer ran off tape (left)"
+        Err "Pointer ran off tape (left)"
 
     else
-        newVm
+        Ok newVm
 
 
-handleIncrementByte : VirtualMachine -> VirtualMachine
+handleIncrementByte : VirtualMachine -> Result String VirtualMachine
 handleIncrementByte vm =
     let
         cellSize =
@@ -146,13 +147,13 @@ handleIncrementByte vm =
             { vm | cells = newCells }
     in
     if newCellValue > cellSize then
-        Debug.todo "Integer overflow"
+        Err "Integer overflow"
 
     else
-        newVm
+        Ok newVm
 
 
-handleDecrementByte : VirtualMachine -> VirtualMachine
+handleDecrementByte : VirtualMachine -> Result String VirtualMachine
 handleDecrementByte vm =
     let
         cells =
@@ -177,13 +178,13 @@ handleDecrementByte vm =
             { vm | cells = newCells }
     in
     if newCellValue < 0 then
-        Debug.todo "Integer underflow"
+        Err "Integer underflow"
 
     else
-        newVm
+        Ok newVm
 
 
-handleOutputByte : VirtualMachine -> VirtualMachine
+handleOutputByte : VirtualMachine -> Result String VirtualMachine
 handleOutputByte vm =
     let
         pointer =
@@ -203,7 +204,7 @@ handleOutputByte vm =
     outputByte cellValue vm
 
 
-outputByte : Int -> VirtualMachine -> VirtualMachine
+outputByte : Int -> VirtualMachine -> Result String VirtualMachine
 outputByte cellValue vm =
     case Ascii.toChar cellValue of
         Just char ->
@@ -211,13 +212,16 @@ outputByte cellValue vm =
                 newOutput =
                     vm.output ++ String.fromChar char
             in
-            { vm | output = newOutput }
+            Ok { vm | output = newOutput }
 
         Nothing ->
-            vm
+            Err <|
+                "Tried to output invalid ASCII char: '"
+                    ++ String.fromInt cellValue
+                    ++ "'"
 
 
-handleInputByte : VirtualMachine -> VirtualMachine
+handleInputByte : VirtualMachine -> Result String VirtualMachine
 handleInputByte vm =
     -- TODO
-    vm
+    Ok vm
