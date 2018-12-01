@@ -3,8 +3,8 @@ module Main exposing (main)
 import Browser
 import Evaluator exposing (evaluate)
 import Html exposing (Html, button, div, h1, text, textarea)
-import Html.Attributes exposing (cols, disabled, id, rows, type_)
-import Html.Events exposing (onClick, onInput)
+import Html.Attributes as Attr
+import Html.Events as Events
 import Lexer exposing (tokenize)
 import Parser exposing (parse)
 import VirtualMachine exposing (VirtualMachine, initVirtualMachine)
@@ -107,7 +107,7 @@ setCode code model =
 
 view : Model -> Html Msg
 view model =
-    div [ id "content" ]
+    div [ Attr.id "content" ]
         [ viewHeader
         , viewInterpreter model
         , viewButtons model
@@ -116,23 +116,23 @@ view model =
 
 viewHeader : Html msg
 viewHeader =
-    h1 [] [ text "Brainfuck interpreter" ]
+    h1 [] [ text "BRAINFUCK INTERPRETER" ]
 
 
 viewInterpreter : Model -> Html Msg
 viewInterpreter model =
-    div [ id "text-areas" ]
+    div [ Attr.id "text-areas" ]
         [ textarea
-            [ id "codeInput"
-            , rows 25
-            , cols 60
-            , onInput SetCode
+            [ Attr.id "codeInput"
+            , Attr.rows 25
+            , Attr.cols 60
+            , Events.onInput SetCode
             ]
             [ text model.programCode ]
         , textarea
-            [ id "codeOutput"
-            , rows 25
-            , cols 40
+            [ Attr.id "codeOutput"
+            , Attr.rows 25
+            , Attr.cols 20
             ]
             [ case model.error of
                 Just error ->
@@ -146,10 +146,11 @@ viewInterpreter model =
 
 viewButtons : Model -> Html Msg
 viewButtons model =
-    div [ id "button-area" ]
+    div [ Attr.id "button-area" ]
         [ button
-            [ type_ "submit"
-            , onClick Evaluate
+            [ Attr.type_ "submit"
+            , Attr.class "btn is-warning"
+            , Events.onClick Evaluate
             ]
-            [ text "Evaluate" ]
+            [ text "EVALUATE" ]
         ]
