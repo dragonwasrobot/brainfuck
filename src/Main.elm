@@ -124,6 +124,9 @@ viewInterpreter model =
     div [ Attr.id "text-areas" ]
         [ textarea
             [ Attr.id "codeInput"
+            , Attr.class "nes-textarea"
+            , Attr.style "width" "unset"
+            , Attr.style "margin-right" "1em"
             , Attr.rows 25
             , Attr.cols 60
             , Events.onInput SetCode
@@ -131,6 +134,9 @@ viewInterpreter model =
             [ text model.programCode ]
         , textarea
             [ Attr.id "codeOutput"
+            , Attr.class "nes-textarea"
+            , Attr.style "width" "unset"
+            , Attr.style "margin-left" "1em"
             , Attr.rows 25
             , Attr.cols 20
             ]
@@ -149,7 +155,7 @@ viewButtons model =
     div [ Attr.id "button-area" ]
         [ button
             [ Attr.type_ "submit"
-            , Attr.class "btn is-warning"
+            , Attr.class "nes-btn is-warning"
             , Events.onClick Evaluate
             ]
             [ text "EVALUATE" ]

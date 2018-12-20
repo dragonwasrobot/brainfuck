@@ -2,6 +2,8 @@
 
 This is an implementation of a basic brainfuck interpreter written in Elm.
 
+![Screenshot](/docs/screenshot.png)
+
 ## Commands
 
 The brainfuck language consists of the following eight commands:
@@ -24,7 +26,5 @@ https://github.com/asdf-vm/asdf, to handle version management of compilers.
 
 With Elm installed, perform the following steps:
 
-- Run the command `elm make src/Main.elm --output=elm.js`,
-- start `elm reactor`,
-- go to http://localhost:8000, and
-- open index.html
+- Run the command `elm make src/Main.elm --output=docs/elm.js`,
+- open `docs/index.html` in your favorite browser
