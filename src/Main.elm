@@ -125,8 +125,6 @@ viewInterpreter model =
         [ textarea
             [ Attr.id "codeInput"
             , Attr.class "nes-textarea"
-            , Attr.style "width" "unset"
-            , Attr.style "margin-right" "1em"
             , Attr.rows 25
             , Attr.cols 60
             , Events.onInput SetCode
@@ -135,8 +133,6 @@ viewInterpreter model =
         , textarea
             [ Attr.id "codeOutput"
             , Attr.class "nes-textarea"
-            , Attr.style "width" "unset"
-            , Attr.style "margin-left" "1em"
             , Attr.rows 25
             , Attr.cols 20
             ]

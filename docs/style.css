@@ -24,13 +24,12 @@ h1 {
 }
 
 textarea {
-  margin-left: 0.50em;
-  margin-right: 0.50em;
-  border: 5px solid #212529;
-  resize: none;
-  font-family: "Press Start 2P";
-  font-size: 1em;
-  font-weight: normal;
   background-color: #fdf6e3;
   color: #212529;
+}
+
+#codeInput, #codeOutput {
+    width: unset;
+    margin-left: 0.50em;
+    margin-right: 0.50em;
 }

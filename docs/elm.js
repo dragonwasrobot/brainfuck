@@ -5671,8 +5671,6 @@ var elm$html$Html$Attributes$rows = function (n) {
 		'rows',
 		elm$core$String$fromInt(n));
 };
-var elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
-var elm$html$Html$Attributes$style = elm$virtual_dom$VirtualDom$style;
 var elm$html$Html$Events$alwaysStop = function (x) {
 	return _Utils_Tuple2(x, true);
 };
@@ -5776,8 +5774,6 @@ var author$project$Main$viewInterpreter = function (model) {
 					[
 						elm$html$Html$Attributes$id('codeInput'),
 						elm$html$Html$Attributes$class('nes-textarea'),
-						A2(elm$html$Html$Attributes$style, 'width', 'unset'),
-						A2(elm$html$Html$Attributes$style, 'margin-right', '1em'),
 						elm$html$Html$Attributes$rows(25),
 						elm$html$Html$Attributes$cols(60),
 						elm$html$Html$Events$onInput(author$project$Main$SetCode)
@@ -5792,8 +5788,6 @@ var author$project$Main$viewInterpreter = function (model) {
 					[
 						elm$html$Html$Attributes$id('codeOutput'),
 						elm$html$Html$Attributes$class('nes-textarea'),
-						A2(elm$html$Html$Attributes$style, 'width', 'unset'),
-						A2(elm$html$Html$Attributes$style, 'margin-left', '1em'),
 						elm$html$Html$Attributes$rows(25),
 						elm$html$Html$Attributes$cols(20)
 					]),
