@@ -26,5 +26,5 @@ https://github.com/asdf-vm/asdf, to handle version management of compilers.
 
 With Elm installed, perform the following steps:
 
-- Run the command `elm make src/Main.elm --output=docs/elm.js`,
+- Run the command `./build.sh`,
 - open `docs/index.html` in your favorite browser
