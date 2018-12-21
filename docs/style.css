@@ -26,10 +26,10 @@ h1 {
 textarea {
   background-color: #fdf6e3;
   color: #212529;
-  resize: none;
 }
 
 #codeInput, #codeOutput {
+    resize: none;
     width: unset;
     margin-left: 0.50em;
     margin-right: 0.50em;
