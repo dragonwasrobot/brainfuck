@@ -26,6 +26,7 @@ h1 {
 textarea {
   background-color: #fdf6e3;
   color: #212529;
+  resize: none;
 }
 
 #codeInput, #codeOutput {
