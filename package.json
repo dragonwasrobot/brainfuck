@@ -1,0 +1,11 @@
+{
+    "name": "brainfuck",
+    "version": "1.0.0",
+    "description": "A brainfuck interpreter written in Elm",
+    "dependencies": {
+        "elm-format": "^0.8.1"
+    },
+    "scripts": {
+        "format": "./node_modules/.bin/elm-format --validate src"
+    }
+}

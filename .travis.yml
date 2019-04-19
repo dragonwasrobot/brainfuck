@@ -9,3 +9,5 @@ install:
   - npm install
   - ./build.sh
 
+script:
+  - npm run format

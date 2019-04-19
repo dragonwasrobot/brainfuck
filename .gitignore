@@ -3,5 +3,8 @@
 # Elm
 elm-stuff/
 
+# node.js
+node_modules/
+
 # OS/X
 .DS_Store
