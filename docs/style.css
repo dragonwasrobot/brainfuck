@@ -1,34 +1,47 @@
 /* style.css */
+:root {
+    --main-color: #ffffff;
+    --main-bg-color: #212529;
+}
 
 body {
-    background-color: #fdf6e3;
+    background-color: var(--main-bg-color);
+}
+
+#container {
+    margin-top: 1em;
 }
 
 h1 {
     text-align: center;
-    color: #212529;
-}
-
-#content {
-  margin: 0 auto 0 auto;
-  margin-top: 1em;
-  text-align: center;
+    color: var(--main-color);
+    margin-bottom: 0.75em;
 }
 
 #text-areas {
     margin-top: 1em;
+    text-align: center;
 }
 
 #button-area {
     margin-top: 1em;
+    text-align: center;
+    margin-bottom: 1em;
 }
 
-textarea {
-  background-color: #fdf6e3;
-  color: #212529;
+.dark-button {
+    padding: 6px 12px 6px 16px;
+    border: 0;
+    box-shadow: 0 -4px var(--main-color),
+                0 4px var(--main-color),
+                4px 0 var(--main-color),
+                -4px 0 var(--main-color);
+    background-color: var(--main-bg-color);
+    font-size: 1.2em;
+    color: var(--main-color);
 }
 
-#codeInput, #codeOutput {
+#code-input, #code-output {
     resize: none;
     width: unset;
     margin-left: 0.50em;

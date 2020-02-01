@@ -1,10 +1,13 @@
 # dot-gitignore
 
+# node.js
+node_modules/
+
 # Elm
 elm-stuff/
 
-# node.js
-node_modules/
+# Emacs
+.dir-locals.el
 
 # OS/X
 .DS_Store

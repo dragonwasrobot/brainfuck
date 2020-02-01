@@ -107,7 +107,7 @@ setCode code model =
 
 view : Model -> Html Msg
 view model =
-    div [ Attr.id "content" ]
+    div [ Attr.id "container" ]
         [ viewHeader
         , viewInterpreter model
         , viewButtons model
@@ -123,16 +123,16 @@ viewInterpreter : Model -> Html Msg
 viewInterpreter model =
     div [ Attr.id "text-areas" ]
         [ textarea
-            [ Attr.id "codeInput"
-            , Attr.class "nes-textarea"
+            [ Attr.id "code-input"
+            , Attr.class "nes-textarea is-dark"
             , Attr.rows 25
             , Attr.cols 60
             , Events.onInput SetCode
             ]
             [ text model.programCode ]
         , textarea
-            [ Attr.id "codeOutput"
-            , Attr.class "nes-textarea"
+            [ Attr.id "code-output"
+            , Attr.class "nes-textarea is-dark"
             , Attr.rows 25
             , Attr.cols 20
             ]
@@ -147,11 +147,11 @@ viewInterpreter model =
 
 
 viewButtons : Model -> Html Msg
-viewButtons model =
+viewButtons _ =
     div [ Attr.id "button-area" ]
         [ button
             [ Attr.type_ "submit"
-            , Attr.class "nes-btn is-warning"
+            , Attr.class "dark-button"
             , Events.onClick Evaluate
             ]
             [ text "EVALUATE" ]
