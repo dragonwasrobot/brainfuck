@@ -1,6 +1,6 @@
 module Evaluator exposing (evaluate)
 
-import Array exposing (Array)
+import Array
 import Ascii
 import Lexer exposing (Symbol(..))
 import Parser exposing (AbstractSyntaxTree(..), Block, Command)
@@ -193,9 +193,6 @@ handleOutputByte vm =
         cells =
             vm.cells
 
-        output =
-            vm.output
-
         cellValue =
             cells
                 |> Array.get pointer
@@ -223,5 +220,5 @@ outputByte cellValue vm =
 
 handleInputByte : VirtualMachine -> Result String VirtualMachine
 handleInputByte vm =
-    -- TODO
+    -- We do not currently do anything with input bytes.
     Ok vm

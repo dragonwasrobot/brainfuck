@@ -12,5 +12,3 @@ install:
 script:
   - npm run format
   - npm run analyse
-  - npm run doc-tests
-  - npm run test
