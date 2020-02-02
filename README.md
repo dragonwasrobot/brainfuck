@@ -1,5 +1,7 @@
 # Brainfuck
 
+[![Build Status](https://travis-ci.org/dragonwasrobot/brainfuck.svg?branch=master)](https://travis-ci.org/dragonwasrobot/brainfuck)
+
 This is an implementation of a basic brainfuck interpreter written in Elm.
 
 ![Screenshot](/docs/screenshot.png)
