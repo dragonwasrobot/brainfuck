@@ -6,7 +6,7 @@
     "elm-analyse": "^0.16.5",
     "elm-format": "=0.8.2",
     "elm-verify-examples": "=5.0.0",
-    "uglify-js": "^3.7.7"
+    "uglify-js": "^3.8.0"
   },
   "scripts": {
     "analyse": "./node_modules/.bin/elm-analyse",
