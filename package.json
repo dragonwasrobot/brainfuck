@@ -5,7 +5,7 @@
   "dependencies": {
     "elm-analyse": "^0.16.5",
     "elm-format": "=0.8.5",
-    "elm-verify-examples": "=5.0.0",
+    "elm-verify-examples": "=5.2.0",
     "uglify-js": "^3.14.2"
   },
   "scripts": {
