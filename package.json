@@ -8,7 +8,9 @@
     "uglify-js": "^3.19.3"
   },
   "scripts": {
-    "format": "./node_modules/.bin/elm-format --validate src"
+    "format": "./node_modules/.bin/elm-format --validate src",
+    "test": "./node_modules/.bin/elm-test tests",
+    "dev": "./node_modules/.bin/elm-test --watch"
   },
   "devDependencies": {
     "elm-test": "^0.19.1-revision16"

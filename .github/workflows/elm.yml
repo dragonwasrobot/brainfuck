@@ -1,0 +1,36 @@
+name: Elm CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    name: Build and test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Elm
+        uses: jorelali/setup-elm@v6
+        with:
+          elm-version: 0.19.1
+
+      - name: Compile project
+        run: elm make src/Main.elm
+
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.18'
+
+      - name: Install and run elm-test
+        run: |
+          npm install
+          npm run format
+          npm run test
