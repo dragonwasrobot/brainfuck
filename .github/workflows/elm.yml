@@ -78,7 +78,10 @@ jobs:
           node-version: '22.18'
 
       - name: Compile and minimize project
-        run: ./build.sh
+        run: |
+          echo "Compiling Elm to JavaScript"
+          npm install
+          ./build.sh
 
       - name: Setup Pages
         id: pages
