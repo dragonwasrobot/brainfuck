@@ -8,11 +8,13 @@
     "uglify-js": "^3.19.3"
   },
   "scripts": {
+    "dev": "./node_modules/.bin/elm-watch hot",
     "format": "./node_modules/.bin/elm-format --validate src",
     "test": "./node_modules/.bin/elm-test tests",
-    "dev": "./node_modules/.bin/elm-test --watch"
+    "test-watch": "./node_modules/.bin/elm-test --watch"
   },
   "devDependencies": {
-    "elm-test": "^0.19.1-revision16"
+    "elm-test": "^0.19.1-revision16",
+    "elm-watch": "^1.2.2"
   }
 }
