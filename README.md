@@ -2,8 +2,6 @@
 
 This is an implementation of a basic brainfuck interpreter written in Elm.
 
-![Screenshot](/docs/screenshot.png)
-
 ## Commands
 
 The brainfuck language consists of the following eight commands:
@@ -28,3 +26,8 @@ With Elm installed, perform the following steps:
 
 - Run the command `./build.sh` to compile the source, then
 - open `docs/index.html` in your favorite browser.
+
+## Inspiration
+
+The look and feel of the UI is directly inspired from one of the mock-ups at:
+https://usgraphics.com/products/berkeley-mono

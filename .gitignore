@@ -5,9 +5,9 @@ node_modules/
 
 # Elm
 elm-stuff/
+elm.js
+elm.min.js
 
-# Emacs
-.dir-locals.el
-
-# OS/X
-.DS_Store
+# CSS
+fontawesome/
+main.css

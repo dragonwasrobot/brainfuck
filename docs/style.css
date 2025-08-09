@@ -1,49 +1,22 @@
-/* style.css */
-:root {
-    --main-color: #ffffff;
-    --main-bg-color: #212529;
+@import "tailwindcss";
+
+/* Theme */
+
+@theme {
+  --font-mono: "IBM Plex Mono", monospace;
 }
 
-body {
-    background-color: var(--main-bg-color);
-}
+/* Utility classes */
 
-#container {
-    margin-top: 1em;
-}
+/* Defines a utility class for rendering a dashed border (only works for
+   vertical borders) that is identical on both Chrome- and Firefox-based
+   browsers.
 
-h1 {
-    text-align: center;
-    color: var(--main-color);
-    margin-bottom: 0.75em;
-}
-
-#text-areas {
-    margin-top: 1em;
-    text-align: center;
-}
-
-#button-area {
-    margin-top: 1em;
-    text-align: center;
-    margin-bottom: 1em;
-}
-
-.dark-button {
-    padding: 6px 12px 6px 16px;
-    border: 0;
-    box-shadow: 0 -4px var(--main-color),
-                0 4px var(--main-color),
-                4px 0 var(--main-color),
-                -4px 0 var(--main-color);
-    background-color: var(--main-bg-color);
-    font-size: 1.2em;
-    color: var(--main-color);
-}
-
-#code-input, #code-output {
-    resize: none;
-    width: unset;
-    margin-left: 0.50em;
-    margin-right: 0.50em;
+   The argument defines the spacing between the dashes in the range 0 - 100; the
+   higher the value the bigger the spacing.
+ */
+@utility border-dashed-* {
+  border-image-source: linear-gradient(to top, transparent 50%, #000 50%);
+  border-image-repeat: repeat;
+  border-image-slice: calc(500 - (5 * --value(integer)));
 }

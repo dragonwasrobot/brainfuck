@@ -79,8 +79,7 @@ jobs:
 
       - name: Compile and minimize project
         run: |
-          echo "Compiling Elm to JavaScript"
-          npm install
+          echo "Compiling project..."
           ./build.sh
 
       - name: Setup Pages

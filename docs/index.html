@@ -1,25 +1,22 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <meta charset="UTF-8">
-        <title>Brainfuck Interpreter</title>
-        <link href="https://fonts.googleapis.com/css?family=Press+Start+2P"
-              rel="stylesheet">
-        <link href="https://unpkg.com/nes.css@2.3.0/css/nes.min.css"
-              rel="stylesheet"
-              type="text/css" />
-        <link href="style.css"
-              rel="stylesheet"
-              type="text/css" />
-        <script src="elm.min.js" type="text/javascript"></script>
-    </head>
+  <head>
+    <meta charset="UTF-8">
+    <title>BF-4000</title>
+    <link href="./main.css" rel="stylesheet" type="text/css" />
+    <link href="./fontawesome/css/all.min.css" rel="stylesheet" type="text/css">
+    <style>
+     @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&display=swap');
+    </style>
+    <script src="elm.min.js" type="text/javascript"></script>
+  </head>
 
-    <body>
-        <div id="elm-main"></div>
-        <script>
-         var app = Elm.Main.init({
-             node: document.getElementById('elm-main')
-         });
-        </script>
-    </body>
+  <body class="bg-slate-50">
+    <div id="elm-main"></div>
+    <script>
+     var app = Elm.Main.init({
+         node: document.getElementById('elm-main')
+     });
+    </script>
+  </body>
 </html>
