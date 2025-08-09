@@ -1,4 +1,4 @@
-module VirtualMachine exposing (VirtualMachine, initVirtualMachine)
+module VirtualMachine exposing (VirtualMachine, init)
 
 import Array exposing (Array)
 
@@ -28,8 +28,8 @@ type alias VirtualMachine =
     }
 
 
-initVirtualMachine : VirtualMachine
-initVirtualMachine =
+init : VirtualMachine
+init =
     { pointer = 0
     , cells = Array.initialize 100 (\_ -> 0)
     , output = ""
