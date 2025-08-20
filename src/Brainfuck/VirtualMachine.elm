@@ -1,4 +1,4 @@
-module VirtualMachine exposing (VirtualMachine, init)
+module Brainfuck.VirtualMachine exposing (VirtualMachine, init)
 
 import Array exposing (Array)
 

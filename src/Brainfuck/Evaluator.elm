@@ -1,10 +1,10 @@
-module Evaluator exposing (evaluate)
+module Brainfuck.Evaluator exposing (evaluate)
 
 import Array
-import Ascii
-import Lexer exposing (Symbol(..))
-import Parser exposing (AbstractSyntaxTree(..), Block, Command)
-import VirtualMachine exposing (VirtualMachine)
+import Brainfuck.Ascii as Ascii
+import Brainfuck.Lexer as Lexer exposing (Symbol(..))
+import Brainfuck.Parser as Parser exposing (AbstractSyntaxTree(..), Block, Command)
+import Brainfuck.VirtualMachine as VirtualMachine exposing (VirtualMachine)
 
 
 evaluate : VirtualMachine -> AbstractSyntaxTree -> Result String VirtualMachine
@@ -220,5 +220,5 @@ outputByte cellValue vm =
 
 handleInputByte : VirtualMachine -> Result String VirtualMachine
 handleInputByte vm =
-    -- We do not currently do anything with input bytes.
+    -- TODO: We do not currently do anything with input bytes.
     Ok vm

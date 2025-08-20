@@ -1,13 +1,13 @@
 module Main exposing (main)
 
+import Brainfuck.Evaluator as Evaluator
+import Brainfuck.Lexer as Lexer
+import Brainfuck.Parser as Parser
+import Brainfuck.VirtualMachine as VirtualMachine exposing (VirtualMachine)
 import Browser
-import Evaluator
 import Html exposing (Html)
 import Html.Attributes as Attr
 import Html.Events as Events
-import Lexer
-import Parser
-import VirtualMachine exposing (VirtualMachine)
 
 
 

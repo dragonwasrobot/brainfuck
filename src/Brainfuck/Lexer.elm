@@ -1,4 +1,4 @@
-module Lexer exposing (Position, Symbol(..), Token, tokenize)
+module Brainfuck.Lexer exposing (Position, Symbol(..), Token, tokenize)
 
 {-| Converts a sequence of characters, the program representation, into a
 sequence of tokens.
@@ -97,6 +97,7 @@ symbol we encounter. Then, given a program, represented by a string,
 tokenize : String -> List Token
 tokenize program =
     let
+        initPos : Position
         initPos =
             { row = 1, column = 0 }
 

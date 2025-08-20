@@ -1,4 +1,4 @@
-module Ascii exposing (toChar)
+module Brainfuck.Ascii exposing (toChar)
 
 {-| Get the ASCII char of the int `c`
 -}

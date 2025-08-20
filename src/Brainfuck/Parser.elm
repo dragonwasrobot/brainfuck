@@ -1,6 +1,6 @@
-module Parser exposing (AbstractSyntaxTree(..), Block, Command, parse)
+module Brainfuck.Parser exposing (AbstractSyntaxTree(..), Block, Command, parse)
 
-import Lexer exposing (Position, Symbol(..), Token)
+import Brainfuck.Lexer as Lexer exposing (Position, Symbol(..), Token)
 
 
 {-| The parser takes a sequence of tokens and constructs a parse tree, an
