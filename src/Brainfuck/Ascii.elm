@@ -7,6 +7,9 @@ module Brainfuck.Ascii exposing (toChar)
 toChar : Int -> Maybe Char
 toChar c =
     case c of
+        0x0A ->
+            Just '\n'
+
         0x20 ->
             Just ' '
 
