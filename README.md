@@ -29,5 +29,7 @@ With Elm installed, perform the following steps:
 
 ## Inspiration
 
-The look and feel of the UI is directly inspired from one of the mock-ups at:
-https://usgraphics.com/products/berkeley-mono
+- The look and feel of the UI is adapted from the 70's technical documentation
+  inspired mock-ups at https://usgraphics.com/products/berkeley-mono
+- Most of the example brainfuck programs are https://brainfuck.org/ and authored
+  by Daniel B Cristofani.
