@@ -7,42 +7,43 @@ import Brainfuck.Parser as Parser exposing (AbstractSyntaxTree(..), Block, Comma
 import Brainfuck.VirtualMachine as VirtualMachine exposing (VirtualMachine)
 
 
-evaluate : VirtualMachine -> AbstractSyntaxTree -> Result String VirtualMachine
-evaluate vm node =
-    case node of
-        Node block ->
-            evaluateBlock block vm
+evaluate : AbstractSyntaxTree -> Result String VirtualMachine -> Result String VirtualMachine
+evaluate node vmResult =
+    vmResult
+        |> Result.andThen
+            (\vm ->
+                case node of
+                    Node block ->
+                        evaluateBlock block vm
 
-        Leaf command ->
-            evaluateCommand command vm
+                    Leaf command ->
+                        evaluateCommand command vm
+            )
 
 
 evaluateBlock : Block -> VirtualMachine -> Result String VirtualMachine
 evaluateBlock block vm =
-    block.children
-        |> List.foldl
-            (\child accVm ->
-                case child of
-                    Leaf childCommand ->
-                        Result.andThen (evaluateCommand childCommand) accVm
+    List.foldl
+        (\child accVm ->
+            case child of
+                Leaf childCommand ->
+                    Result.andThen (evaluateCommand childCommand) accVm
 
-                    Node childBlock ->
-                        Result.andThen (evaluateChildBlock childBlock) accVm
-            )
-            (Ok vm)
+                Node childBlock ->
+                    Result.andThen (evaluateChildBlock childBlock) accVm
+        )
+        (Ok vm)
+        block.children
 
 
 evaluateChildBlock : Block -> VirtualMachine -> Result String VirtualMachine
 evaluateChildBlock childBlock vm =
     let
-        cells =
-            vm.cells
-
         pointer =
             vm.pointer
 
         cellValue =
-            cells |> Array.get pointer |> Maybe.withDefault 0
+            vm |> VirtualMachine.getCell pointer |> Maybe.withDefault 0
     in
     if cellValue > 0 then
         let
@@ -88,7 +89,7 @@ handleIncrementPointer : VirtualMachine -> Result String VirtualMachine
 handleIncrementPointer vm =
     let
         tapeSize =
-            100
+            30000
 
         newPointer =
             vm.pointer + 1
@@ -96,7 +97,7 @@ handleIncrementPointer vm =
         newVm =
             { vm | pointer = newPointer }
     in
-    if newPointer > tapeSize then
+    if newPointer >= tapeSize then
         Err "Pointer ran off tape (right)"
 
     else
@@ -125,26 +126,19 @@ handleIncrementByte vm =
         cellSize =
             255
 
-        cells =
-            vm.cells
-
         pointer =
             vm.pointer
 
         oldCellValue =
-            cells |> Array.get pointer |> Maybe.withDefault 0
+            vm
+                |> VirtualMachine.getCell pointer
+                |> Maybe.withDefault 0
 
         newCellValue =
             oldCellValue + 1
 
-        newCells =
-            Array.set
-                pointer
-                newCellValue
-                cells
-
         newVm =
-            { vm | cells = newCells }
+            VirtualMachine.setCell pointer newCellValue vm
     in
     if newCellValue > cellSize then
         Err "Integer overflow"
@@ -156,26 +150,19 @@ handleIncrementByte vm =
 handleDecrementByte : VirtualMachine -> Result String VirtualMachine
 handleDecrementByte vm =
     let
-        cells =
-            vm.cells
-
         pointer =
             vm.pointer
 
         oldCellValue =
-            cells |> Array.get pointer |> Maybe.withDefault 0
+            vm
+                |> VirtualMachine.getCell pointer
+                |> Maybe.withDefault 0
 
         newCellValue =
             oldCellValue - 1
 
-        newCells =
-            Array.set
-                pointer
-                newCellValue
-                cells
-
         newVm =
-            { vm | cells = newCells }
+            vm |> VirtualMachine.setCell pointer newCellValue
     in
     if newCellValue < 0 then
         Err "Integer underflow"
@@ -194,8 +181,8 @@ handleOutputByte vm =
             vm.cells
 
         cellValue =
-            cells
-                |> Array.get pointer
+            vm
+                |> VirtualMachine.getCell pointer
                 |> Maybe.withDefault 0
     in
     outputByte cellValue vm
@@ -220,5 +207,17 @@ outputByte cellValue vm =
 
 handleInputByte : VirtualMachine -> Result String VirtualMachine
 handleInputByte vm =
-    -- TODO: We do not currently do anything with input bytes.
-    Ok vm
+    case List.head vm.input of
+        Nothing ->
+            -- TODO: No input left!
+            Err "Input empty!"
+
+        Just byte ->
+            let
+                newInput =
+                    List.drop 1 vm.input
+
+                newVm =
+                    vm |> VirtualMachine.setCell vm.pointer byte
+            in
+            Ok { newVm | input = newInput }

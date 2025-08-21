@@ -3,6 +3,7 @@ module Main exposing (main)
 import Brainfuck.Evaluator as Evaluator
 import Brainfuck.Lexer as Lexer
 import Brainfuck.Parser as Parser
+import Brainfuck.Program as BFProgram exposing (Code)
 import Brainfuck.VirtualMachine as VirtualMachine exposing (VirtualMachine)
 import Browser
 import Html exposing (Html)
@@ -27,28 +28,21 @@ main =
 -- Model
 
 
-type alias Code =
-    String
-
-
 type alias Model =
     { vm : VirtualMachine
-    , programCode : Code
+    , inputCode : Code
+    , inputData : String
     , result : Result String String
     }
 
 
 init : Model
 init =
-    { vm = VirtualMachine.init
-    , programCode = initialProgram
+    { vm = VirtualMachine.init []
+    , inputCode = BFProgram.rot13
+    , inputData = ""
     , result = Ok ""
     }
-
-
-initialProgram : Code
-initialProgram =
-    "Print 'Hello world!'\n+++++ +++++             initialize counter (cell #0) to 10\n[                       use loop to set the next four cells to 70/100/30/10\n> +++++ ++              add  7 to cell #1\n> +++++ +++++           add 10 to cell #2\n> +++                   add  3 to cell #3\n> +                     add  1 to cell #4\n<<<< -                  decrement counter (cell #0)\n]\n> ++ .                  print 'H'\n> + .                   print 'e'\n+++++ ++ .              print 'l'\n.                       print 'l'\n+++ .                   print 'o'\n> ++ .                  print ' '\n<< +++++ +++++ +++++ .  print 'W'\n> .                     print 'o'\n+++ .                   print 'r'\n----- - .               print 'l'\n----- --- .             print 'd'\n> + .                   print '!'"
 
 
 
@@ -57,7 +51,8 @@ initialProgram =
 
 type Msg
     = Evaluate
-    | SetCode String
+    | SetCode Code
+    | SetInput String
 
 
 
@@ -73,30 +68,50 @@ update msg model =
         SetCode code ->
             setCode code model
 
+        SetInput input ->
+            setInput input model
+
 
 evaluateProgram : Model -> Model
 evaluateProgram model =
     let
-        newVmResult =
-            model.programCode
+        parsedProgram =
+            model.inputCode
                 |> Lexer.tokenize
                 |> Parser.parse
-                |> Result.andThen (Evaluator.evaluate VirtualMachine.init)
+
+        eofByte =
+            0
+
+        vm =
+            VirtualMachine.init <|
+                (model.inputData
+                    |> String.toList
+                    |> List.map Char.toCode
+                )
+                    ++ [ eofByte ]
+
+        newVmResult =
+            parsedProgram
+                |> Result.andThen (\node -> Evaluator.evaluate node (Ok vm))
+                |> Debug.log "Final VM"
     in
     case newVmResult of
         Ok newVm ->
-            { model
-                | vm = newVm
-                , result = Ok newVm.output
-            }
+            { model | vm = newVm, result = Ok newVm.output }
 
         Err error ->
             { model | result = Err error }
 
 
-setCode : String -> Model -> Model
+setCode : Code -> Model -> Model
 setCode code model =
-    { model | programCode = code }
+    { model | inputCode = code }
+
+
+setInput : String -> Model -> Model
+setInput input model =
+    { model | inputData = Debug.log "input" input }
 
 
 
@@ -156,7 +171,7 @@ viewHeader =
         , Html.div [ Attr.class "text-right" ]
             [ Html.text "SECTION 4.2"
             , Html.br [] []
-            , Html.text "SEP 1988"
+            , Html.text "SEP 1968"
             ]
         ]
 
@@ -185,20 +200,37 @@ viewInterpreter model =
             Html.div [ Attr.id "subheader" ]
                 [ Html.span [] [ Html.text "PROGRAM EXECUTION" ] ]
 
-        viewPrompt =
+        viewSource =
             Html.div
                 [ Attr.id "request"
                 , Attr.class "mt-2 flex flex-row"
                 ]
-                [ Html.span [ Attr.class "w-1/6" ] [ Html.text "PROMPT" ]
+                [ Html.span [ Attr.class "w-1/6" ] [ Html.text "SOURCE" ]
                 , Html.textarea
-                    [ Attr.id "code-input"
+                    [ Attr.id "code-source"
                     , Attr.class "w-5/6 border-none outline-none resize-none"
                     , Attr.rows 22
                     , Attr.cols 60
                     , Events.onInput SetCode
                     ]
-                    [ Html.text model.programCode ]
+                    [ Html.text model.inputCode ]
+                ]
+
+        viewInput =
+            Html.div
+                [ Attr.id "body"
+                , Attr.class "mt-2 flex flex-row"
+                ]
+                [ Html.span [ Attr.class "w-1/6" ] [ Html.text "INPUT" ]
+                , Html.textarea
+                    [ Attr.id "code-input"
+                    , Attr.class "w-5/6 border-none outline-none resize-none"
+                    , Attr.rows 2
+                    , Attr.cols 60
+                    , Attr.placeholder "ENTER DATA"
+                    , Events.onInput SetInput
+                    ]
+                    [ Html.text model.inputData ]
                 ]
 
         viewRun =
@@ -283,7 +315,9 @@ viewInterpreter model =
         [ viewSubHeader
         , Html.hr [ Attr.class "mt-1.5" ] []
         , Html.hr [ Attr.class "mt-0.25" ] []
-        , viewPrompt
+        , viewSource
+        , Html.hr [ Attr.class "mt-2" ] []
+        , viewInput
         , viewRun
         , Html.hr [ Attr.class "my-2" ] []
         , viewResult
