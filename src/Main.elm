@@ -39,7 +39,7 @@ type alias Model =
 init : Model
 init =
     { vm = VirtualMachine.init []
-    , inputCode = BFProgram.rot13
+    , inputCode = BFProgram.helloWorld
     , inputData = ""
     , result = Ok ""
     }

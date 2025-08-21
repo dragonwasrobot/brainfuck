@@ -1,7 +1,7 @@
 module LexerTests exposing (..)
 
+import Brainfuck.Lexer as Lexer exposing (Position, Symbol(..), Token)
 import Expect exposing (Expectation)
-import Lexer exposing (Position, Symbol(..), Token)
 import Test exposing (..)
 
 
