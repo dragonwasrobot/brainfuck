@@ -8,12 +8,13 @@
     "uglify-js": "^3.19.3"
   },
   "scripts": {
-    "css": "./node_modules/.bin/tailwindcss -i docs/style.css -o docs/main.css",
-    "dev": "./node_modules/.bin/elm-watch hot",
-    "format": "./node_modules/.bin/elm-format --validate src",
-    "test": "./node_modules/.bin/elm-test tests",
-    "test-watch": "./node_modules/.bin/elm-test --watch",
-    "tailwind-watch": "npx @tailwindcss/cli -i docs/style.css -o docs/main.css --watch"
+    "css": "npx @tailwindcss/cli -i docs/style.css -o docs/main.css",
+    "css-watch": "npx @tailwindcss/cli -i docs/style.css -o docs/main.css --watch",
+    "compile": "npx elm-watch make",
+    "compile-watch": "npx elm-watch hot",
+    "format": "npx elm-format --validate src",
+    "test": "npx elm-test tests",
+    "test-watch": "npx elm-test --watch"
   },
   "devDependencies": {
     "elm-test": "^0.19.1-revision16",
