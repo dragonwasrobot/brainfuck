@@ -94,7 +94,6 @@ evaluateProgram model =
         newVmResult =
             parsedProgram
                 |> Result.andThen (\node -> Evaluator.evaluate node (Ok vm))
-                |> Debug.log "Final VM"
     in
     case newVmResult of
         Ok newVm ->
@@ -111,7 +110,7 @@ setCode code model =
 
 setInput : String -> Model -> Model
 setInput input model =
-    { model | inputData = Debug.log "input" input }
+    { model | inputData = input }
 
 
 
