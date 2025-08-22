@@ -20,7 +20,7 @@
     "elm-test": "^0.19.1-revision16",
     "elm-watch": "^1.2.3",
     "@fortawesome/fontawesome-free": "^6.7.2",
-    "@tailwindcss/cli": "^4.1.4",
+    "@tailwindcss/cli": "^4.1.12",
     "tailwindcss": "^4.1.12"
   }
 }
