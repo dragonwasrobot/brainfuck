@@ -16,7 +16,7 @@
    higher the value the bigger the spacing.
  */
 @utility border-dashed-* {
-  border-image-source: linear-gradient(to top, transparent 50%, #000 50%);
+  border-image-source: linear-gradient(to bottom, transparent 50%, #000 50%);
   border-image-repeat: repeat;
-  border-image-slice: calc(500 - (5 * --value(integer)));
+  border-image-slice: 0 calc(500 - (5 * --value(integer))) 0 0;
 }

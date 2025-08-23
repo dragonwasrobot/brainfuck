@@ -28,21 +28,29 @@ main =
 -- Model
 
 
-type alias Model =
-    { vm : VirtualMachine
-    , inputCode : Code
-    , inputData : String
-    , result : Result String String
-    }
-
-
 init : Model
 init =
     { vm = VirtualMachine.init []
     , inputCode = BFProgram.helloWorld
     , inputData = ""
     , result = Ok ""
+    , page = ReferenceManualPage
     }
+
+
+type alias Model =
+    { vm : VirtualMachine
+    , inputCode : Code
+    , inputData : String
+    , result : Result String String
+    , page : Page
+    }
+
+
+type Page
+    = ReferenceManualPage
+    | InterpreterPage
+    | SourceArchivesPage
 
 
 
@@ -53,6 +61,8 @@ type Msg
     = Evaluate
     | SetCode Code
     | SetInput String
+    | ChangePage Page
+    | SelectSourceFile String
 
 
 
@@ -70,6 +80,12 @@ update msg model =
 
         SetInput input ->
             setInput input model
+
+        ChangePage page ->
+            setPage page model
+
+        SelectSourceFile filename ->
+            selectSourceFile filename model
 
 
 evaluateProgram : Model -> Model
@@ -113,18 +129,98 @@ setInput input model =
     { model | inputData = input }
 
 
+setPage : Page -> Model -> Model
+setPage page model =
+    { model | page = page }
+
+
+selectSourceFile : String -> Model -> Model
+selectSourceFile filename model =
+    -- TODO
+    model
+
+
 
 -- View
 
 
 view : Model -> Html Msg
 view model =
+    Html.div [ Attr.id "document-container", Attr.class "flex flex-row my-8" ]
+        [ Html.div [ Attr.id "column-1", Attr.class "w-1/6" ] []
+        , Html.div [ Attr.id "column-2", Attr.class "w-4/6" ] [ viewBody model ]
+        , Html.div [ Attr.id "column-3", Attr.class "w-1/6" ] [ viewNavigation ]
+        ]
+
+
+viewNavigation : Html Msg
+viewNavigation =
+    -- TODO: Add selected indication
+    let
+        buttonStyling =
+            "bg-white shadow-lg p-2 border border-slate-200 text-sm cursor-pointer text-left"
+    in
     Html.div
-        [ Attr.id "container"
-        , Attr.class "flex min-h-screen bg-white w-3xl mx-auto shadow-lg border border-slate-200 font-mono"
+        [ Attr.id "navigation-container"
+
+        -- TODO: Use fixed `position` instead of columns https://tailwindcss.com/docs/position#fixed-positioning-elements
+        , Attr.class "flex mx-auto font-mono tracking-wider"
+        ]
+        [ Html.div
+            [ Attr.id "navigation"
+            , Attr.class "flex flex-col gap-y-10"
+            ]
+            [ Html.button
+                [ Attr.id "show-reference-manual"
+                , Attr.type_ "submit"
+                , Attr.class buttonStyling
+                , Events.onClick (ChangePage ReferenceManualPage)
+                ]
+                [ Html.i [ Attr.class "mr-2 fa-solid fa-file-lines" ] []
+                , Html.text "REFERENCE MANUAL"
+                ]
+            , Html.button
+                [ Attr.id "interpreter"
+                , Attr.type_ "submit"
+                , Attr.class buttonStyling
+                , Events.onClick (ChangePage InterpreterPage)
+                ]
+                [ Html.i [ Attr.class "fa-solid fa-tape mr-2" ] []
+                , Html.text "BF-4000 MACHINE"
+                ]
+            , Html.button
+                [ Attr.id "show-source-archives"
+                , Attr.type_ "submit"
+                , Attr.class buttonStyling
+                , Events.onClick (ChangePage SourceArchivesPage)
+                ]
+                [ Html.i [ Attr.class "mr-2 fa-solid fa-box-archive" ] []
+                , Html.text "SOURCE ARCHIVES"
+                ]
+            ]
+        ]
+
+
+viewBody : Model -> Html Msg
+viewBody model =
+    let
+        viewSelectedBody =
+            case model.page of
+                InterpreterPage ->
+                    viewInterpreter model
+
+                ReferenceManualPage ->
+                    viewReferenceManual
+
+                SourceArchivesPage ->
+                    viewSourceArchives model
+    in
+    Html.div
+        [ Attr.id "paper-container"
+        , Attr.class "flex min-h-192 w-3xl mx-auto bg-white shadow-lg border border-slate-200 font-mono"
         ]
         [ viewAside
-        , viewBody model
+        , viewSelectedBody
         ]
 
 
@@ -135,7 +231,7 @@ viewAside =
             "text-sm bg-[url(./circle.svg)] bg-center bg-repeat-y bg-size-[1.25em]"
 
         paperTapeBorder =
-            "w-1/11 border-[0.125em] border-dashed-75 border-l-0 border-t-0 border-b-0 border-black"
+            "w-1/11 border-[0.125em] border-dashed-60 border-l-0 border-t-0 border-b-0 border-black"
     in
     Html.aside
         [ Attr.id "paper-strip"
@@ -144,20 +240,315 @@ viewAside =
         []
 
 
-viewBody : Model -> Html Msg
-viewBody model =
+viewReferenceManual : Html Msg
+viewReferenceManual =
+    let
+        viewIntroduction =
+            Html.div [ Attr.id "introduction" ]
+                [ Html.div
+                    [ Attr.id "subheader", Attr.class "text-left font-semibold" ]
+                    [ Html.span [ Attr.class "mt-2" ] [ Html.text "BF-4000 MACHINE LANGUAGE" ] ]
+                , Html.hr [ Attr.class "mt-1" ] []
+                , Html.hr [ Attr.class "mt-0.5" ] []
+                , Html.div [ Attr.class "mt-4 text-sm hyphens-auto" ]
+                    [ Html.span []
+                        [ Html.text "The BF-4000 instruction set provides a compact general-purpose machine language intended for efficient execution on small to medium mainframes including time-shared installations. By employing a rigorously orthogonal set of eight primitive instructions, BF-4000 attains a degree of simplicity that promotes provable behavior and economical interpreter design. The instruction repertoire maps directly to a linear working store (\"tape\") addressed by a movable indicator (\"pointer\"), enabling deterministic execution without recourse to elaborate control units." ]
+                    , Html.br [] []
+                    , Html.br [] []
+                    , Html.span [] [ Html.text "Prominent features include:" ]
+                    , Html.ul [ Attr.class "mt-2 ml-4 list-disc" ]
+                        [ Html.li [ Attr.class "mt-2" ]
+                            [ Html.span [ Attr.class "font-semibold" ] [ Html.text "Minimal yet complete operator set." ]
+                            , Html.span [ Attr.class "ml-2" ] [ Html.text "Eight single-character instructions provide arithmetic on the working cell, bidirectional pointer motion, byte-stream input/output compatible with TeleType® devices, and structured iteration via matched delimiters." ]
+                            ]
+                        , Html.li [ Attr.class "mt-2" ]
+                            [ Html.span [ Attr.class "font-semibold" ] [ Html.text "High transportability." ]
+                            , Html.span [ Attr.class "ml-2" ] [ Html.text "Cell width, tape extent, and end-of-file conventions are all configurable at the time of program execution, permitting straightforward accommodation to diverse cores, drums, or disc subsystems while retaining program form." ]
+                            ]
+                        , Html.li [ Attr.class "mt-2" ]
+                            [ Html.span [ Attr.class "font-semibold" ] [ Html.text "Deterministic control transfer." ]
+                            , Html.span [ Attr.class "ml-2" ] [ Html.text "Loop entry/exit semantics are fixed at translation time by bracket pairing, obviating run-time ambiguity and simplifying diagnostic procedures." ]
+                            ]
+                        , Html.li [ Attr.class "mt-2" ]
+                            [ Html.span [ Attr.class "font-semibold" ] [ Html.text "Economy of resources." ]
+                            , Html.span [ Attr.class "ml-2" ] [ Html.text "No symbol tables, stacks, or hidden temporaries are required beyond the working store and the input/output streams, rendering BF-4000 suitable for dynamic programming, numerical computation, and environments of constrained memory." ]
+                            ]
+                        ]
+                    , Html.br [] []
+                    , Html.span [] [ Html.text "The following concise specification enumerates the syntax and semantics of the BF-4000 machine language." ]
+                    ]
+                , Html.hr [ Attr.class "my-4" ] []
+                ]
+
+        viewSourceFormatDescription =
+            Html.div [ Attr.class "mt-4" ]
+                [ Html.h3 [ Attr.class "mt-4" ] [ Html.text "1. Source Format" ]
+                , Html.div [ Attr.class "mt-2 text-sm hyphens-auto" ] [ Html.span [] [ Html.text "The following holds for any BF-4000 source program:" ] ]
+                , Html.ul [ Attr.class "mt-2 ml-4 list-disc text-sm hyphens-auto" ]
+                    [ Html.li [ Attr.class "mt-1" ] [ Html.text "A program is a finite sequence of characters." ]
+                    , Html.li [ Attr.class "mt-1" ] [ Html.text "The significant characters (tokens) are: > < + - . , [ ]." ]
+                    , Html.li [ Attr.class "mt-1" ] [ Html.text "All other characters are ignored (treated as comments)." ]
+                    , Html.li [ Attr.class "mt-1" ] [ Html.text "An interpreter must diagnose unmatched [ or ] as a translation error." ]
+                    ]
+                ]
+
+        viewGrammarDescription =
+            Html.div [ Attr.class "mt-4" ]
+                [ Html.h3 [] [ Html.text "2. Grammar (BNF)" ]
+                , Html.div [ Attr.class "mt-2 text-sm hyphens-auto" ] [ Html.span [] [ Html.text "The syntax of the BF-4000 machine language is defined according to the following Backus-Naur Form (BNF) grammar:" ] ]
+                , Html.pre [ Attr.class "mx-8 my-4 py-4 border border-l-0 border-r-0 text-sm leading-6" ] [ Html.text "  <program> ::= <instr>*\n  <instr> ::= \">\" | \"<\" | \"+\" | \"-\" | \".\" | \",\" | <loop>\n  <loop> ::= \"[\" <instr>* \"]\"" ]
+                , Html.div [ Attr.class "text-sm hyphens-auto" ] [ Html.span [] [ Html.text "Bracket pairing is determined by static nesting at translation time." ] ]
+                ]
+
+        viewInstructionSemanticsDescription =
+            Html.div [ Attr.class "mt-4" ]
+                [ Html.h3 [] [ Html.text "3. Instruction Semantics" ]
+                , Html.div [ Attr.class "mt-2 text-sm hyphens-auto" ]
+                    [ Html.span [] [ Html.text "Table 2.3 below lists the symbols and semantics of the eight instructions of the BF-4000 machine language." ] ]
+                , Html.div [ Attr.class "mx-8 text-sm hyphens-auto" ]
+                    [ Html.table [ Attr.class "mx-auto mt-4 w-full table-auto" ]
+                        [ Html.thead []
+                            [ Html.tr []
+                                [ Html.th [ Attr.class "p-1 border border-l-0 border-r-0" ] [ Html.span [ Attr.class "font-semibold" ] [ Html.text "INSTRUCTION" ] ]
+                                , Html.th [ Attr.class "p-1 border border-l-0 border-r-0" ] [ Html.span [ Attr.class "font-semibold" ] [ Html.text "SYMBOL" ] ]
+                                , Html.th [ Attr.class "p-1 border border-l-0 border-r-0" ] [ Html.span [ Attr.class "font-semibold" ] [ Html.text "SEMANTICS" ] ]
+                                ]
+                            ]
+                        , Html.tbody
+                            []
+                            [ Html.tr []
+                                [ Html.td [ Attr.class "p-1 border border-b-0 border-l-0 border-r-0 text-center" ] [ Html.span [] [ Html.text "Increment pointer" ] ]
+                                , Html.td [ Attr.class "p-1 border border-b-0 border-l-0 border-r-0 text-center" ] [ Html.span [] [ Html.text ">" ] ]
+                                , Html.td [ Attr.class "p-1 border border-b-0 border-l-0 border-r-0" ] [ Html.span [] [ Html.text "DP ← DP + 1." ] ]
+                                ]
+                            , Html.tr []
+                                [ Html.td [ Attr.class "p-1 border border-t-0 border-b-0 border-l-0 border-r-0 text-center" ] [ Html.span [] [ Html.text "Decrement pointer" ] ]
+                                , Html.td [ Attr.class "p-1 border border-t-0 border-b-0 border-l-0 border-r-0 text-center" ] [ Html.span [] [ Html.text "<" ] ]
+                                , Html.td [ Attr.class "p-1 border border-t-0 border-b-0 border-l-0 border-r-0" ] [ Html.span [] [ Html.text "DP ← DP - 1." ] ]
+                                ]
+                            , Html.tr []
+                                [ Html.td [ Attr.class "p-1 border border-t-0 border-b-0 border-l-0 border-r-0 text-center" ] [ Html.span [] [ Html.text "Increment cell" ] ]
+                                , Html.td [ Attr.class "p-1 border border-t-0 border-b-0 border-l-0 border-r-0 text-center" ] [ Html.span [] [ Html.text "+" ] ]
+                                , Html.td [ Attr.class "p-1 border border-t-0 border-b-0 border-l-0 border-r-0" ] [ Html.span [] [ Html.text "cell[DP] ← cell[DP] + 1." ] ]
+                                ]
+                            , Html.tr []
+                                [ Html.td [ Attr.class "p-1 border border-t-0 border-b-0 border-l-0 border-r-0 text-center" ] [ Html.span [] [ Html.text "Decrement cell" ] ]
+                                , Html.td [ Attr.class "p-1 border border-t-0 border-b-0 border-l-0 border-r-0 text-center" ] [ Html.span [] [ Html.text "-" ] ]
+                                , Html.td [ Attr.class "p-1 border border-t-0 border-b-0 border-l-0 border-r-0" ] [ Html.span [] [ Html.text "cell[DP] ← cell[DP] − 1." ] ]
+                                ]
+                            , Html.tr []
+                                [ Html.td [ Attr.class "p-1 border border-t-0 border-b-0 border-l-0 border-r-0 text-center" ] [ Html.span [] [ Html.text "Print value" ] ]
+                                , Html.td [ Attr.class "p-1 border border-t-0 border-b-0 border-l-0 border-r-0 text-center" ] [ Html.span [] [ Html.text "." ] ]
+                                , Html.td [ Attr.class "p-1 border border-t-0 border-b-0 border-l-0 border-r-0" ] [ Html.span [] [ Html.text "emit cell[DP] to output as one byte." ] ]
+                                ]
+                            , Html.tr []
+                                [ Html.td [ Attr.class "p-1 border border-t-0 border-b-0 border-l-0 border-r-0 text-center" ] [ Html.span [] [ Html.text "Read value" ] ]
+                                , Html.td [ Attr.class "p-1 border border-t-0 border-b-0 border-l-0 border-r-0 text-center" ] [ Html.span [] [ Html.text "," ] ]
+                                , Html.td [ Attr.class "p-1 border border-t-0 border-b-0 border-l-0 border-r-0" ] [ Html.span [] [ Html.text "read one byte from input into cell[DP]." ] ]
+                                ]
+                            , Html.tr []
+                                [ Html.td [ Attr.class "p-1 border border-t-0 border-b-0 border-l-0 border-r-0 text-center" ] [ Html.span [] [ Html.text "Loop start" ] ]
+                                , Html.td [ Attr.class "p-1 border border-t-0 border-b-0 border-l-0 border-r-0 text-center" ] [ Html.span [] [ Html.text "[" ] ]
+                                , Html.td [ Attr.class "p-1 border border-t-0 border-b-0 border-l-0 border-r-0" ]
+                                    [ Html.span []
+                                        [ Html.text "if cell[DP] = 0, jump to command"
+                                        , Html.br [] []
+                                        , Html.text "after matching ], else proceed."
+                                        ]
+                                    ]
+                                ]
+                            , Html.tr []
+                                [ Html.td [ Attr.class "p-1 border border-t-0 border-l-0 border-r-0 text-center" ] [ Html.span [] [ Html.text "Loop end" ] ]
+                                , Html.td [ Attr.class "p-1 border border-t-0 border-l-0 border-r-0 text-center" ] [ Html.span [] [ Html.text "]" ] ]
+                                , Html.td [ Attr.class "p-1 border border-t-0 border-l-0 border-r-0" ]
+                                    [ Html.span []
+                                        [ Html.text "if cell[DP] ≠ 0, jump to command "
+                                        , Html.br [] []
+                                        , Html.text "after the matching [, else proceed."
+                                        ]
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ]
+                , Html.div [ Attr.class "mx-4 mt-1 text-center text-sm" ]
+                    [ Html.span [ Attr.class "font-semibold" ] [ Html.text "Table 2.3" ] ]
+                ]
+
+        viewAbstractMachineDescription =
+            Html.div [ Attr.class "mt-4" ]
+                [ Html.h3 [] [ Html.text "4. Abstract Machine" ]
+                , Html.div [ Attr.class "mt-2 text-sm hyphens-auto" ] [ Html.span [] [ Html.text "The BF-4000 machine architecture is defined as:" ] ]
+                , Html.ul [ Attr.class "mt-2 ml-4 list-disc text-sm hyphens-auto" ]
+                    [ Html.li [ Attr.class "mt-1" ] [ Html.text "A tape representing a one-dimensional array of cells." ]
+                    , Html.li [ Attr.class "mt-1" ] [ Html.text "A data pointer (DP) designates one cell on the tape." ]
+                    , Html.li [ Attr.class "mt-1" ] [ Html.text "Two byte streams: one for input and one for output." ]
+                    , Html.li [ Attr.class "mt-1" ] [ Html.text "The tape length is 30,000 cells." ]
+                    , Html.li [ Attr.class "mt-1" ] [ Html.text "Every cell on the tape has a width of 1 byte." ]
+                    , Html.li [ Attr.class "mt-1" ] [ Html.text "If a data pointer gets out of tape range, an error code is printed." ]
+                    , Html.li [ Attr.class "mt-1" ] [ Html.text "If a cell value exceeds its legal range, an error code is printed." ]
+                    , Html.li [ Attr.class "mt-1" ] [ Html.text "Encountering EOF during input read does not change cell value." ]
+                    ]
+                ]
+
+        viewLanguageSpec =
+            Html.div [ Attr.id "language-spec" ]
+                [ Html.h2 [ Attr.class "font-semibold" ] [ Html.text "LANGUAGE SPECIFICATION" ]
+                , viewSourceFormatDescription
+                , viewGrammarDescription
+                , viewInstructionSemanticsDescription
+                , viewAbstractMachineDescription
+                , Html.div [ Attr.class "mt-6 mb-2 text-sm hyphens-auto" ]
+                    [ Html.span []
+                        [ Html.text "Consult Section 7.4 Source Archives for a selection of common programs written in the BF-4000 language." ]
+                    ]
+                ]
+    in
     Html.div
         [ Attr.id "body"
         , Attr.class "flex flex-col w-10/11 bg-white mx-5 mt-4 tracking-wider"
         ]
-        [ viewHeader
-        , viewTitle
-        , viewInterpreter model
+        [ Html.div
+            [ Attr.id "header-section"
+            , Attr.class "w-full flex flex-row justify-between text-sm font-medium"
+            ]
+            [ Html.div [ Attr.class "text-left" ]
+                [ Html.text "DRAGON & ROBOT"
+                , Html.br [] []
+                , Html.text "BUSINESS MACHINES INC."
+                ]
+            , Html.div [ Attr.class "text-right" ]
+                [ Html.text "SECTION 2.1"
+                , Html.br [] []
+                , Html.text "SEP 1968"
+                ]
+            ]
+        , Html.div
+            [ Attr.id "archives-section"
+            , Attr.class "mt-4 min-h-164"
+            ]
+            [ viewIntroduction
+            , viewLanguageSpec
+            ]
+        , Html.hr [ Attr.class "mt-2" ] []
+        , viewFooter 42
         ]
 
 
-viewHeader : Html msg
-viewHeader =
+type alias ArchiveEntry =
+    { id : String
+    , title : String
+    , box : String
+    , shelf : String
+    }
+
+
+viewSourceArchives : Model -> Html Msg
+viewSourceArchives model =
+    let
+        sourceArchiveData =
+            [ ArchiveEntry "001" "HELLO-WORLD" "BX-07-14" "S-3B"
+            , ArchiveEntry "002" "QUINE" "BX-09-22" "S-1A"
+            , ArchiveEntry "003" "ROT-13" "BX-12-03" "S-4C"
+            , ArchiveEntry "004" "B-SORT" "BX-03-18" "S-2D"
+            , ArchiveEntry "005" "COLLATZ" "BX-15-07" "S-5A"
+            , ArchiveEntry "006" "LIFE" "BX-11-10" "S-2A"
+            , ArchiveEntry "007" "GOLDEN" "BX-04-05" "S-3C"
+            , ArchiveEntry "008" "FACTORIAL" "BX-18-11" "S-1C"
+            , ArchiveEntry "009" "FIBONACCI" "BX-06-02" "S-4A"
+            , ArchiveEntry "010" "I-SORT" "BX-13-16" "S-5D"
+            , ArchiveEntry "011" "SIERPINSKI" "BX-20-04" "S-2B"
+            , ArchiveEntry "012" "RNG-4" "BX-02-12" "S-3A"
+            , ArchiveEntry "013" "NUMWARP" "BX-07-19" "S-3D"
+            , ArchiveEntry "014" "SQUARES" "BX-10-08" "S-4B"
+            , ArchiveEntry "015" "THUE-MORSE" "BX-05-21" "S-2C"
+            , ArchiveEntry "016" "EXPONENT" "BX-16-11" "S-5B"
+            ]
+
+        viewRow archiveEntry =
+            let
+                dots =
+                    60
+                        - String.length archiveEntry.id
+                        - String.length archiveEntry.title
+                        - String.length archiveEntry.box
+                        - String.length archiveEntry.shelf
+            in
+            Html.div
+                [ Attr.class "flex flex-row justify-between cursor-pointer"
+                , Events.onClick (ChangePage InterpreterPage)
+                ]
+                [ Html.span [] [ Html.text <| archiveEntry.id ++ " " ++ archiveEntry.title ]
+                , Html.span [] [ Html.text <| " " ++ String.repeat dots "." ++ " " ]
+                , Html.span [] [ Html.text (archiveEntry.box ++ " " ++ archiveEntry.shelf) ]
+                ]
+    in
+    Html.div
+        [ Attr.id "body"
+        , Attr.class "flex flex-col w-10/11 bg-white mx-5 mt-4 tracking-wider"
+        ]
+        [ Html.div
+            [ Attr.id "header-section"
+            , Attr.class "w-full flex flex-row justify-between text-sm font-medium"
+            ]
+            [ Html.div [ Attr.class "text-left" ]
+                [ Html.text "DRAGON & ROBOT"
+                , Html.br [] []
+                , Html.text "BUSINESS MACHINES INC."
+                ]
+            , Html.div [ Attr.class "text-right" ]
+                [ Html.text "SECTION 7.4"
+                , Html.br [] []
+                , Html.text "SEP 1968"
+                ]
+            ]
+        , Html.div
+            [ Attr.id "archives-section"
+            , Attr.class "mt-4 min-h-164"
+            ]
+            [ Html.div
+                [ Attr.id "subheader"
+                , Attr.class "text-left font-semibold"
+                ]
+                [ Html.span [ Attr.class "mt-2" ] [ Html.text "SOURCE ARCHIVES" ]
+                ]
+            , Html.hr [ Attr.class "mt-2" ] []
+            , Html.div [ Attr.id "list-header", Attr.class "mt-2 flex flex-row justify-between" ]
+                [ Html.span [ Attr.class "font-semibold" ] [ Html.text "TAPE TITLE" ]
+                , Html.span [ Attr.class "font-semibold" ] [ Html.text "STORAGE LOCATION" ]
+                ]
+            , Html.hr [ Attr.class "mt-2" ] []
+            , Html.div [ Attr.id "list-body", Attr.class "mt-2 flex flex-col gap-y-1" ]
+                (sourceArchiveData |> List.map viewRow)
+            , Html.div [ Attr.class "mt-8 ml-2 text-sm hyphens-auto" ]
+                [ Html.span []
+                    [ Html.span [ Attr.class "font-semibold mr-2" ] [ Html.text "BX-YY-ZZ" ]
+                    , Html.text "denotes the box containing the tape."
+                    , Html.br [] []
+                    , Html.span [ Attr.class "font-semibold mr-2" ] [ Html.text "S-XX" ]
+                    , Html.text "denotes the shelf storing the box."
+                    ]
+                ]
+            ]
+        , Html.hr [ Attr.class "mt-2" ] []
+        , viewFooter 211
+        ]
+
+
+viewInterpreter : Model -> Html Msg
+viewInterpreter model =
+    Html.div
+        [ Attr.id "body"
+        , Attr.class "flex flex-col w-10/11 bg-white mx-5 mt-4 tracking-wider"
+        ]
+        [ viewInterpreterHeader
+        , viewInterpreterTitle
+        , viewInterpreterForm model
+        ]
+
+
+viewInterpreterHeader : Html msg
+viewInterpreterHeader =
     Html.div
         [ Attr.id "header-section"
         , Attr.class "w-full flex flex-row justify-between text-sm font-medium"
@@ -175,8 +566,8 @@ viewHeader =
         ]
 
 
-viewTitle : Html msg
-viewTitle =
+viewInterpreterTitle : Html msg
+viewInterpreterTitle =
     Html.div
         [ Attr.id "title-section"
         , Attr.class "mx-auto"
@@ -187,13 +578,13 @@ viewTitle =
             ]
             [ Html.text "DATA SHEET"
             , Html.br [] []
-            , Html.text "MACHINE BF-4000"
+            , Html.text "BF-4000 MACHINE"
             ]
         ]
 
 
-viewInterpreter : Model -> Html Msg
-viewInterpreter model =
+viewInterpreterForm : Model -> Html Msg
+viewInterpreterForm model =
     let
         viewSubHeader =
             Html.div [ Attr.id "subheader" ]
@@ -210,6 +601,7 @@ viewInterpreter model =
                     , Attr.class "w-5/6 border-none outline-none resize-none"
                     , Attr.rows 22
                     , Attr.cols 60
+                    , Attr.placeholder "ENTER SOURCE"
                     , Events.onInput SetCode
                     ]
                     [ Html.text model.inputCode ]
@@ -217,14 +609,14 @@ viewInterpreter model =
 
         viewInput =
             Html.div
-                [ Attr.id "body"
+                [ Attr.id "input-field"
                 , Attr.class "mt-2 flex flex-row"
                 ]
                 [ Html.span [ Attr.class "w-1/6" ] [ Html.text "INPUT" ]
                 , Html.textarea
                     [ Attr.id "code-input"
                     , Attr.class "w-5/6 border-none outline-none resize-none"
-                    , Attr.rows 2
+                    , Attr.rows 5
                     , Attr.cols 60
                     , Attr.placeholder "ENTER DATA"
                     , Events.onInput SetInput
@@ -232,20 +624,15 @@ viewInterpreter model =
                     [ Html.text model.inputData ]
                 ]
 
-        viewRun =
-            -- TODO: Replace with a key listener on CTRL + ENTER
-            Html.div
-                [ Attr.id "run"
-                , Attr.class "mt-2"
+        viewRunButton =
+            Html.button
+                [ Attr.id "run-program"
+                , Attr.type_ "submit"
+                , Attr.class "mt-4 p-2 bg-white border text-sm text-left cursor-pointer"
+                , Events.onClick Evaluate
                 ]
-                [ Html.button
-                    [ Attr.type_ "submit"
-                    , Attr.class "p-2 border cursor-pointer"
-                    , Events.onClick Evaluate
-                    ]
-                    [ Html.i [ Attr.class "fa-solid fa-play mr-2" ] []
-                    , Html.text "RUN"
-                    ]
+                [ Html.i [ Attr.class "fa-solid fa-play mr-2" ] []
+                , Html.text "RUN PROGRAM"
                 ]
 
         viewResult =
@@ -296,16 +683,6 @@ viewInterpreter model =
                 , Html.br [] []
                 , Html.text "A reference to the BF-4000 machine language can be found on pages 138-149."
                 ]
-
-        viewFooter =
-            Html.div
-                [ Attr.id "footer"
-                , Attr.class "mt-4 mb-4 flex flex-row justify-between"
-                ]
-                [ Html.span [] [ Html.text "DENMARK" ]
-                , Html.span [ Attr.class "font-semibold" ] [ Html.text "Computation as a Service™" ]
-                , Html.span [] [ Html.text "Page 127" ]
-                ]
     in
     Html.div
         [ Attr.id "interpreter-section"
@@ -317,11 +694,23 @@ viewInterpreter model =
         , viewSource
         , Html.hr [ Attr.class "mt-2" ] []
         , viewInput
-        , viewRun
+        , viewRunButton
         , Html.hr [ Attr.class "my-2" ] []
         , viewResult
         , Html.hr [ Attr.class "my-2" ] []
         , viewDescription
         , Html.hr [ Attr.class "my-2" ] []
-        , viewFooter
+        , viewFooter 127
+        ]
+
+
+viewFooter : Int -> Html msg
+viewFooter pageNumber =
+    Html.div
+        [ Attr.id "footer"
+        , Attr.class "mt-4 mb-4 flex flex-row justify-between"
+        ]
+        [ Html.span [] [ Html.text "DENMARK" ]
+        , Html.span [ Attr.class "font-semibold" ] [ Html.text "Tabulating the Future™" ]
+        , Html.span [] [ Html.text <| "Page " ++ String.fromInt pageNumber ]
         ]
