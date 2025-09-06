@@ -12,6 +12,7 @@
     "css-watch": "npx @tailwindcss/cli -i docs/style.css -o docs/main.css --watch",
     "compile": "npx elm-watch make",
     "compile-watch": "npx elm-watch hot",
+    "local-server": "cd docs && python3 -m http.server",
     "format": "npx elm-format --validate src",
     "test": "npx elm-test tests",
     "test-watch": "npx elm-test --watch"

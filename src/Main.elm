@@ -3,39 +3,56 @@ module Main exposing (main)
 import Brainfuck.Evaluator as Evaluator
 import Brainfuck.Lexer as Lexer
 import Brainfuck.Parser as Parser
-import Brainfuck.Program as BFProgram exposing (Code)
 import Brainfuck.VirtualMachine as VirtualMachine exposing (VirtualMachine)
 import Browser
 import Html exposing (Html)
 import Html.Attributes as Attr
 import Html.Events as Events
+import Http exposing (Response(..))
+import List
+import List.Extra as List
+import String
 
 
 
--- Main
+-- ** Main
 
 
 main : Program () Model Msg
 main =
-    Browser.sandbox
+    Browser.element
         { init = init
-        , update = update
         , view = view
+        , update = update
+        , subscriptions = subscriptions
         }
 
 
 
--- Model
+-- ** Model
 
 
-init : Model
-init =
-    { vm = VirtualMachine.init []
-    , inputCode = BFProgram.helloWorld
-    , inputData = ""
-    , result = Ok ""
-    , page = ReferenceManualPage
-    }
+init : () -> ( Model, Cmd Msg )
+init flags =
+    let
+        initModel =
+            { vm = VirtualMachine.init []
+            , inputCode = ""
+            , inputData = ""
+            , result = Ok ""
+            , page = InterpreterPage
+            }
+    in
+    case List.head sourceArchiveData of
+        Nothing ->
+            ( initModel, Cmd.none )
+
+        Just archiveEntry ->
+            selectSourceFile archiveEntry initModel
+
+
+type alias Code =
+    String
 
 
 type alias Model =
@@ -54,7 +71,7 @@ type Page
 
 
 
--- Msg
+-- ** Msg
 
 
 type Msg
@@ -62,14 +79,15 @@ type Msg
     | SetCode Code
     | SetInput String
     | ChangePage Page
-    | SelectSourceFile String
+    | SelectSourceFile ArchiveEntry
+    | SourceFileDownloaded (Result Http.Error String)
 
 
 
--- Update
+-- ** Update
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Evaluate ->
@@ -84,11 +102,14 @@ update msg model =
         ChangePage page ->
             setPage page model
 
-        SelectSourceFile filename ->
-            selectSourceFile filename model
+        SelectSourceFile archiveEntry ->
+            selectSourceFile archiveEntry model
+
+        SourceFileDownloaded result ->
+            loadSourceFile result model
 
 
-evaluateProgram : Model -> Model
+evaluateProgram : Model -> ( Model, Cmd Msg )
 evaluateProgram model =
     let
         parsedProgram =
@@ -113,35 +134,55 @@ evaluateProgram model =
     in
     case newVmResult of
         Ok newVm ->
-            { model | vm = newVm, result = Ok newVm.output }
+            ( { model | vm = newVm, result = Ok newVm.output }, Cmd.none )
 
         Err error ->
-            { model | result = Err error }
+            ( { model | result = Err error }, Cmd.none )
 
 
-setCode : Code -> Model -> Model
+setCode : Code -> Model -> ( Model, Cmd Msg )
 setCode code model =
-    { model | inputCode = code }
+    ( { model | inputCode = code }, Cmd.none )
 
 
-setInput : String -> Model -> Model
+setInput : String -> Model -> ( Model, Cmd Msg )
 setInput input model =
-    { model | inputData = input }
+    ( { model | inputData = input }, Cmd.none )
 
 
-setPage : Page -> Model -> Model
+setPage : Page -> Model -> ( Model, Cmd Msg )
 setPage page model =
-    { model | page = page }
+    ( { model | page = page }, Cmd.none )
 
 
-selectSourceFile : String -> Model -> Model
-selectSourceFile filename model =
-    -- TODO
-    model
+selectSourceFile : ArchiveEntry -> Model -> ( Model, Cmd Msg )
+selectSourceFile archiveEntry model =
+    let
+        filename =
+            archiveEntry.id ++ "-" ++ String.toLower archiveEntry.title ++ ".bf"
+
+        fetchProgram =
+            Http.get
+                { url = "/bf-programs/" ++ filename
+                , expect = Http.expectString SourceFileDownloaded
+                }
+    in
+    ( model, fetchProgram )
+
+
+loadSourceFile : Result Http.Error String -> Model -> ( Model, Cmd Msg )
+loadSourceFile result model =
+    case result of
+        Err error ->
+            -- TODO: Show error
+            ( model, Cmd.none )
+
+        Ok code ->
+            ( { model | inputCode = code, page = InterpreterPage }, Cmd.none )
 
 
 
--- View
+-- ** View
 
 
 view : Model -> Html Msg
@@ -149,21 +190,24 @@ view model =
     Html.div [ Attr.id "document-container", Attr.class "flex flex-row my-8" ]
         [ Html.div [ Attr.id "column-1", Attr.class "w-1/6" ] []
         , Html.div [ Attr.id "column-2", Attr.class "w-4/6" ] [ viewBody model ]
-        , Html.div [ Attr.id "column-3", Attr.class "w-1/6" ] [ viewNavigation ]
+        , Html.div [ Attr.id "column-3", Attr.class "w-1/6" ] [ viewNavigation model ]
         ]
 
 
-viewNavigation : Html Msg
-viewNavigation =
-    -- TODO: Add selected indication
+viewNavigation : Model -> Html Msg
+viewNavigation model =
     let
         buttonStyling =
-            "bg-white shadow-lg p-2 border border-slate-200 text-sm cursor-pointer text-left"
+            "bg-white shadow-lg p-2 border border-slate-200 text-sm text-left"
+
+        enabledStyling =
+            "text-black cursor-pointer"
+
+        disabledStyling =
+            "text-slate-300 cursor-default"
     in
     Html.div
         [ Attr.id "navigation-container"
-
-        -- TODO: Use fixed `position` instead of columns https://tailwindcss.com/docs/position#fixed-positioning-elements
         , Attr.class "flex mx-auto font-mono tracking-wider"
         ]
         [ Html.div
@@ -174,6 +218,10 @@ viewNavigation =
                 [ Attr.id "show-reference-manual"
                 , Attr.type_ "submit"
                 , Attr.class buttonStyling
+                , Attr.classList
+                    [ ( disabledStyling, model.page == ReferenceManualPage )
+                    , ( enabledStyling, model.page /= ReferenceManualPage )
+                    ]
                 , Events.onClick (ChangePage ReferenceManualPage)
                 ]
                 [ Html.i [ Attr.class "mr-2 fa-solid fa-file-lines" ] []
@@ -183,6 +231,10 @@ viewNavigation =
                 [ Attr.id "interpreter"
                 , Attr.type_ "submit"
                 , Attr.class buttonStyling
+                , Attr.classList
+                    [ ( disabledStyling, model.page == InterpreterPage )
+                    , ( enabledStyling, model.page /= InterpreterPage )
+                    ]
                 , Events.onClick (ChangePage InterpreterPage)
                 ]
                 [ Html.i [ Attr.class "fa-solid fa-tape mr-2" ] []
@@ -192,6 +244,10 @@ viewNavigation =
                 [ Attr.id "show-source-archives"
                 , Attr.type_ "submit"
                 , Attr.class buttonStyling
+                , Attr.classList
+                    [ ( disabledStyling, model.page == SourceArchivesPage )
+                    , ( enabledStyling, model.page /= SourceArchivesPage )
+                    ]
                 , Events.onClick (ChangePage SourceArchivesPage)
                 ]
                 [ Html.i [ Attr.class "mr-2 fa-solid fa-box-archive" ] []
@@ -443,28 +499,30 @@ type alias ArchiveEntry =
     }
 
 
+sourceArchiveData : List ArchiveEntry
+sourceArchiveData =
+    [ ArchiveEntry "001" "HELLO-WORLD" "BX-07-14" "S-3B"
+    , ArchiveEntry "002" "QUINE" "BX-09-22" "S-1A"
+    , ArchiveEntry "003" "ROT-13" "BX-12-03" "S-4C"
+    , ArchiveEntry "004" "B-SORT" "BX-03-18" "S-2D"
+    , ArchiveEntry "005" "COLLATZ" "BX-15-07" "S-5A"
+    , ArchiveEntry "006" "LIFE" "BX-11-10" "S-2A"
+    , ArchiveEntry "007" "GOLDEN" "BX-04-05" "S-3C"
+    , ArchiveEntry "008" "FACTORIAL" "BX-18-11" "S-1C"
+    , ArchiveEntry "009" "FIBONACCI" "BX-06-02" "S-4A"
+    , ArchiveEntry "010" "I-SORT" "BX-13-16" "S-5D"
+    , ArchiveEntry "011" "SIERPINSKI" "BX-20-04" "S-2B"
+    , ArchiveEntry "012" "RNG-4" "BX-02-12" "S-3A"
+    , ArchiveEntry "013" "NUMWARP" "BX-07-19" "S-3D"
+    , ArchiveEntry "014" "SQUARES" "BX-10-08" "S-4B"
+    , ArchiveEntry "015" "THUE-MORSE" "BX-05-21" "S-2C"
+    , ArchiveEntry "016" "EXPONENT" "BX-16-11" "S-5B"
+    ]
+
+
 viewSourceArchives : Model -> Html Msg
 viewSourceArchives model =
     let
-        sourceArchiveData =
-            [ ArchiveEntry "001" "HELLO-WORLD" "BX-07-14" "S-3B"
-            , ArchiveEntry "002" "QUINE" "BX-09-22" "S-1A"
-            , ArchiveEntry "003" "ROT-13" "BX-12-03" "S-4C"
-            , ArchiveEntry "004" "B-SORT" "BX-03-18" "S-2D"
-            , ArchiveEntry "005" "COLLATZ" "BX-15-07" "S-5A"
-            , ArchiveEntry "006" "LIFE" "BX-11-10" "S-2A"
-            , ArchiveEntry "007" "GOLDEN" "BX-04-05" "S-3C"
-            , ArchiveEntry "008" "FACTORIAL" "BX-18-11" "S-1C"
-            , ArchiveEntry "009" "FIBONACCI" "BX-06-02" "S-4A"
-            , ArchiveEntry "010" "I-SORT" "BX-13-16" "S-5D"
-            , ArchiveEntry "011" "SIERPINSKI" "BX-20-04" "S-2B"
-            , ArchiveEntry "012" "RNG-4" "BX-02-12" "S-3A"
-            , ArchiveEntry "013" "NUMWARP" "BX-07-19" "S-3D"
-            , ArchiveEntry "014" "SQUARES" "BX-10-08" "S-4B"
-            , ArchiveEntry "015" "THUE-MORSE" "BX-05-21" "S-2C"
-            , ArchiveEntry "016" "EXPONENT" "BX-16-11" "S-5B"
-            ]
-
         viewRow archiveEntry =
             let
                 dots =
@@ -476,7 +534,7 @@ viewSourceArchives model =
             in
             Html.div
                 [ Attr.class "flex flex-row justify-between cursor-pointer"
-                , Events.onClick (ChangePage InterpreterPage)
+                , Events.onClick (SelectSourceFile archiveEntry)
                 ]
                 [ Html.span [] [ Html.text <| archiveEntry.id ++ " " ++ archiveEntry.title ]
                 , Html.span [] [ Html.text <| " " ++ String.repeat dots "." ++ " " ]
@@ -599,8 +657,7 @@ viewInterpreterForm model =
                 , Html.textarea
                     [ Attr.id "code-source"
                     , Attr.class "w-5/6 border-none outline-none resize-none"
-                    , Attr.rows 22
-                    , Attr.cols 60
+                    , Attr.rows 25
                     , Attr.placeholder "ENTER SOURCE"
                     , Events.onInput SetCode
                     ]
@@ -637,13 +694,21 @@ viewInterpreterForm model =
 
         viewResult =
             let
+                chunkString str =
+                    str
+                        |> String.toList
+                        |> List.greedyGroupsOf 59
+                        |> List.intersperse [ '\n' ]
+                        |> List.concat
+                        |> String.fromList
+
                 ( status, response ) =
                     case model.result of
                         Err error ->
                             ( "ERROR", error )
 
                         Ok result ->
-                            ( "SUCCESS", result )
+                            ( "SUCCESS", chunkString result )
             in
             Html.div []
                 [ Html.div
@@ -714,3 +779,8 @@ viewFooter pageNumber =
         , Html.span [ Attr.class "font-semibold" ] [ Html.text "Tabulating the Future™" ]
         , Html.span [] [ Html.text <| "Page " ++ String.fromInt pageNumber ]
         ]
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Sub.none
