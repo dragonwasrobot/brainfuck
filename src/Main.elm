@@ -163,7 +163,7 @@ selectSourceFile archiveEntry model =
 
         fetchProgram =
             Http.get
-                { url = "/bf-programs/" ++ filename
+                { url = "/brainfuck/bf-programs/" ++ filename
                 , expect = Http.expectString SourceFileDownloaded
                 }
     in
