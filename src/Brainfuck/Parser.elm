@@ -1,148 +1,126 @@
-module Brainfuck.Parser exposing (AbstractSyntaxTree(..), Block, Command, parse)
+module Brainfuck.Parser exposing
+    ( AbstractSyntaxTree(..)
+    , Expression(..)
+    , parse
+    )
 
-import Brainfuck.Lexer as Lexer exposing (Position, Symbol(..), Token)
+import Parser as P exposing ((|.), (|=), Parser, Step(..))
 
 
-{-| The parser takes a sequence of tokens and constructs a parse tree, an
-abstract syntax tree.
+{-| The `parse` function takes a Brainfuck source program as a `String` and
+constructs an `AbstractSyntaxTree` of the program.
 
-
-## Grammar
-
-The grammar of brainfuck is very simple (we ignore comments):
+Syntax:
 
     <program> ::= { <block> | <command> }
     <block>   ::= '[' { <block> | <command> } ']'
     <command> ::= '>' | '<' | '+' | '-' | '.' | ','
 
+    <program> ::= { <instr> }
+    <instr>   ::= <loop> | <command>
+    <loop>    ::= "[" { <instr> } "]"
+    <command> ::= ">" | "<" | "+" | "-" | "." | ","
+
+Semantics:
+
+  - '>' -- increment the data pointer
+  - '<' -- decrement the data pointer
+  - '+' -- increment the byte at the data pointer
+  - '-' -- decrement the byte at the data pointer
+  - '.' -- output the byte at the data pointer
+  - ',' -- input a byte and store it in the byte at the data pointer
+  - '[' -- jump forward past the matching `]` if the byte at data pointer is zero
+  - ']' -- jump back to the matching `[` unless the byte at data pointer is zero
+
 -}
-type AbstractSyntaxTree
-    = Leaf Command
-    | Node Block
-
-
-type alias Command =
-    { value : Symbol
-    , position : Position
-    }
-
-
-type alias Block =
-    { children : List AbstractSyntaxTree
-    , position : Position
-    }
-
-
-{-| The Parser construct an abstract syntax tree based on the list of tokens.
--}
-parse : List Token -> Result String AbstractSyntaxTree
-parse tokens =
+parse : String -> Result (List P.DeadEnd) AbstractSyntaxTree
+parse source =
     let
-        root =
-            Node
-                { position = { row = 0, column = 0 }
-                , children = []
-                }
+        cleanedSource =
+            -- Bit of a hack, should also parse comments
+            source
+                |> String.filter (\c -> List.member c [ '[', ']', '+', '-', '>', '<', ',', '.' ])
     in
-    root
-        |> parseTokens tokens
-        |> Result.andThen
-            (\( ast, remainingTokens ) ->
-                if List.isEmpty remainingTokens then
-                    Ok ast
-
-                else
-                    Err "Finished parsing too early!"
-            )
+    P.run pProgram cleanedSource
 
 
-{-| `parseTokens` takes a list of tokens and returns an abstract syntax
-tree of the program.
+type AbstractSyntaxTree
+    = AbstractSyntaxTree (List Expression)
+
+
+type Expression
+    = Block (List Expression)
+    | IncrementPointer
+    | DecrementPointer
+    | IncrementByte
+    | DecrementByte
+    | OutputByte
+    | InputByte
+
+
+pProgram : Parser AbstractSyntaxTree
+pProgram =
+    P.map AbstractSyntaxTree (many pExpression)
+
+
+pExpression : Parser Expression
+pExpression =
+    P.oneOf [ pBlock, pCommand ]
+
+
+{-| Apply a parser zero or more times and return a list of the results.
 -}
-parseTokens :
-    List Token
-    -> AbstractSyntaxTree
-    -> Result String ( AbstractSyntaxTree, List Token )
-parseTokens tokensList node =
-    case tokensList of
-        [] ->
-            Ok ( node, [] )
-
-        token :: tokens ->
-            case token.value of
-                StartBlock ->
-                    parseStartBlock token tokens node
-
-                EndBlock ->
-                    parseEndBlock tokens node
-
-                _ ->
-                    parseCommand token tokens node
+many : Parser a -> Parser (List a)
+many p =
+    P.loop [] (manyHelp p)
 
 
-parseStartBlock :
-    Token
-    -> List Token
-    -> AbstractSyntaxTree
-    -> Result String ( AbstractSyntaxTree, List Token )
-parseStartBlock token tokens node =
-    case node of
-        Leaf _ ->
-            Err "Unexpected command!"
-
-        Node block ->
-            let
-                childBlock =
-                    Node
-                        { children = []
-                        , position = token.position
-                        }
-            in
-            childBlock
-                |> parseTokens tokens
-                |> Result.andThen
-                    (\( parsedChildBlock, remainingTokens ) ->
-                        let
-                            newChildren =
-                                block.children ++ [ parsedChildBlock ]
-
-                            newNode =
-                                Node { block | children = newChildren }
-                        in
-                        parseTokens remainingTokens newNode
-                    )
+manyHelp : Parser a -> List a -> Parser (Step (List a) (List a))
+manyHelp p vs =
+    P.oneOf
+        [ P.succeed (\v -> Loop (v :: vs))
+            |= p
+            |. P.spaces
+        , P.succeed ()
+            |> P.map (\_ -> Done (List.reverse vs))
+        ]
 
 
-parseEndBlock :
-    List Token
-    -> AbstractSyntaxTree
-    -> Result String ( AbstractSyntaxTree, List Token )
-parseEndBlock tokens node =
-    Ok ( node, tokens )
+pBlock : Parser Expression
+pBlock =
+    P.succeed Block
+        |= brackets (many (P.lazy (\_ -> pExpression)))
 
 
-parseCommand :
-    Token
-    -> List Token
-    -> AbstractSyntaxTree
-    -> Result String ( AbstractSyntaxTree, List Token )
-parseCommand token tokens node =
-    case node of
-        Leaf _ ->
-            Err "Enclosing block was command!"
+{-| Parse an expression between square brackets.
 
-        Node block ->
-            let
-                command =
-                    Leaf
-                        { value = token.value
-                        , position = token.position
-                        }
+    brackets p == between (symbol "[") (symbol "]") p
 
-                newChildren =
-                    block.children ++ [ command ]
+-}
+brackets : Parser a -> Parser a
+brackets =
+    between (P.symbol "[") (P.symbol "]")
 
-                newNode =
-                    Node { block | children = newChildren }
-            in
-            parseTokens tokens newNode
+
+{-| Parse an expression between two other parsers
+-}
+between : Parser opening -> Parser closing -> Parser a -> Parser a
+between opening closing p =
+    P.succeed identity
+        |. opening
+        |. P.spaces
+        |= p
+        |. P.spaces
+        |. closing
+
+
+pCommand : Parser Expression
+pCommand =
+    P.oneOf
+        [ P.map (\_ -> IncrementPointer) (P.symbol ">")
+        , P.map (\_ -> DecrementPointer) (P.symbol "<")
+        , P.map (\_ -> IncrementByte) (P.symbol "+")
+        , P.map (\_ -> DecrementByte) (P.symbol "-")
+        , P.map (\_ -> OutputByte) (P.symbol ".")
+        , P.map (\_ -> InputByte) (P.symbol ",")
+        ]

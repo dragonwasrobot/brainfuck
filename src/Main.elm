@@ -1,7 +1,6 @@
 module Main exposing (main)
 
 import Brainfuck.Evaluator as Evaluator
-import Brainfuck.Lexer as Lexer
 import Brainfuck.Parser as Parser
 import Brainfuck.VirtualMachine as VirtualMachine exposing (VirtualMachine)
 import Browser
@@ -76,6 +75,7 @@ type Page
 
 type Msg
     = Evaluate
+    | ClearOutput
     | SetCode Code
     | SetInput String
     | ChangePage Page
@@ -92,6 +92,9 @@ update msg model =
     case msg of
         Evaluate ->
             evaluateProgram model
+
+        ClearOutput ->
+            clearOutput model
 
         SetCode code ->
             setCode code model
@@ -114,7 +117,6 @@ evaluateProgram model =
     let
         parsedProgram =
             model.inputCode
-                |> Lexer.tokenize
                 |> Parser.parse
 
         eofByte =
@@ -129,8 +131,13 @@ evaluateProgram model =
                     ++ [ eofByte ]
 
         newVmResult =
-            parsedProgram
-                |> Result.andThen (\node -> Evaluator.evaluate node (Ok vm))
+            case parsedProgram of
+                Err _ ->
+                    -- TODO: Figure out how to convert err to something useful
+                    Err "Failed to parse program due to <deal with DeadEnd output>"
+
+                Ok program ->
+                    Evaluator.evaluate program vm
     in
     case newVmResult of
         Ok newVm ->
@@ -138,6 +145,11 @@ evaluateProgram model =
 
         Err error ->
             ( { model | result = Err error }, Cmd.none )
+
+
+clearOutput : Model -> ( Model, Cmd Msg )
+clearOutput model =
+    ( { model | result = Ok "" }, Cmd.none )
 
 
 setCode : Code -> Model -> ( Model, Cmd Msg )
@@ -158,12 +170,17 @@ setPage page model =
 selectSourceFile : ArchiveEntry -> Model -> ( Model, Cmd Msg )
 selectSourceFile archiveEntry model =
     let
+        -- prod: /brainfuck/bf-programs/
+        -- dev: /bf-programs/
+        prefixPath =
+            "/brainfuck/bf-programs/"
+
         filename =
             archiveEntry.id ++ "-" ++ String.toLower archiveEntry.title ++ ".bf"
 
         fetchProgram =
             Http.get
-                { url = "/brainfuck/bf-programs/" ++ filename
+                { url = prefixPath ++ filename
                 , expect = Http.expectString SourceFileDownloaded
                 }
     in
@@ -692,6 +709,17 @@ viewInterpreterForm model =
                 , Html.text "RUN PROGRAM"
                 ]
 
+        viewClearButton =
+            Html.button
+                [ Attr.id "clear-program"
+                , Attr.type_ "submit"
+                , Attr.class "ml-4 mt-4 p-2 bg-white border text-sm text-left cursor-pointer"
+                , Events.onClick ClearOutput
+                ]
+                [ Html.i [ Attr.class "fa-solid fa-xmark mr-2" ] []
+                , Html.text "CLEAR"
+                ]
+
         viewResult =
             let
                 chunkString str =
@@ -760,6 +788,7 @@ viewInterpreterForm model =
         , Html.hr [ Attr.class "mt-2" ] []
         , viewInput
         , viewRunButton
+        , viewClearButton
         , Html.hr [ Attr.class "my-2" ] []
         , viewResult
         , Html.hr [ Attr.class "my-2" ] []

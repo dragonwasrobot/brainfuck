@@ -1,43 +1,58 @@
 module Brainfuck.Evaluator exposing (evaluate)
 
-import Array
 import Brainfuck.Ascii as Ascii
-import Brainfuck.Lexer as Lexer exposing (Symbol(..))
-import Brainfuck.Parser as Parser exposing (AbstractSyntaxTree(..), Block, Command)
+import Brainfuck.Parser as Parser exposing (AbstractSyntaxTree(..), Expression(..))
 import Brainfuck.VirtualMachine as VirtualMachine exposing (VirtualMachine)
+import List.Extra as List exposing (Step(..))
 
 
-evaluate : AbstractSyntaxTree -> Result String VirtualMachine -> Result String VirtualMachine
-evaluate node vmResult =
-    vmResult
-        |> Result.andThen
-            (\vm ->
-                case node of
-                    Node block ->
-                        evaluateBlock block vm
+evaluate : AbstractSyntaxTree -> VirtualMachine -> Result String VirtualMachine
+evaluate (AbstractSyntaxTree exprs) vm =
+    List.stoppableFoldl
+        (\expr vmAcc ->
+            case evaluateExpression expr vmAcc of
+                Err reason ->
+                    Stop (Err reason)
 
-                    Leaf command ->
-                        evaluateCommand command vm
-            )
-
-
-evaluateBlock : Block -> VirtualMachine -> Result String VirtualMachine
-evaluateBlock block vm =
-    List.foldl
-        (\child accVm ->
-            case child of
-                Leaf childCommand ->
-                    Result.andThen (evaluateCommand childCommand) accVm
-
-                Node childBlock ->
-                    Result.andThen (evaluateChildBlock childBlock) accVm
+                Ok newVm ->
+                    Continue (Ok newVm)
         )
         (Ok vm)
-        block.children
+        exprs
 
 
-evaluateChildBlock : Block -> VirtualMachine -> Result String VirtualMachine
-evaluateChildBlock childBlock vm =
+evaluateExpression : Expression -> Result String VirtualMachine -> Result String VirtualMachine
+evaluateExpression expr vmResult =
+    case vmResult of
+        Err reason ->
+            Err reason
+
+        Ok vm ->
+            case expr of
+                Block subExprs ->
+                    evaluateBlock subExprs vm
+
+                IncrementPointer ->
+                    handleIncrementPointer vm
+
+                DecrementPointer ->
+                    handleDecrementPointer vm
+
+                IncrementByte ->
+                    handleIncrementByte vm
+
+                DecrementByte ->
+                    handleDecrementByte vm
+
+                OutputByte ->
+                    handleOutputByte vm
+
+                InputByte ->
+                    handleInputByte vm
+
+
+evaluateBlock : List Expression -> VirtualMachine -> Result String VirtualMachine
+evaluateBlock exprs vm =
     let
         pointer =
             vm.pointer
@@ -47,42 +62,28 @@ evaluateChildBlock childBlock vm =
     in
     if cellValue > 0 then
         let
-            newAcc =
-                evaluateBlock childBlock vm
+            vmResult =
+                List.stoppableFoldl
+                    (\expr vmAcc ->
+                        case evaluateExpression expr vmAcc of
+                            Err reason ->
+                                Stop (Err reason)
+
+                            Ok newVm ->
+                                Continue (Ok newVm)
+                    )
+                    (Ok vm)
+                    exprs
         in
-        newAcc
-            |> Result.andThen (evaluateChildBlock childBlock)
+        case vmResult of
+            Err reason ->
+                Err reason
+
+            Ok newVm ->
+                evaluateBlock exprs newVm
 
     else
         Ok vm
-
-
-evaluateCommand : Command -> VirtualMachine -> Result String VirtualMachine
-evaluateCommand command vm =
-    case command.value of
-        IncrementPointer ->
-            handleIncrementPointer vm
-
-        DecrementPointer ->
-            handleDecrementPointer vm
-
-        IncrementByte ->
-            handleIncrementByte vm
-
-        DecrementByte ->
-            handleDecrementByte vm
-
-        OutputByte ->
-            handleOutputByte vm
-
-        InputByte ->
-            handleInputByte vm
-
-        StartBlock ->
-            Err "Unexpected command: start block!"
-
-        EndBlock ->
-            Err "Unexpected command: end block!"
 
 
 handleIncrementPointer : VirtualMachine -> Result String VirtualMachine
@@ -209,7 +210,7 @@ handleInputByte : VirtualMachine -> Result String VirtualMachine
 handleInputByte vm =
     case List.head vm.input of
         Nothing ->
-            -- TODO: No input left!
+            -- TODO: No input left -> halt program and prompt for more input!
             Err "Input empty!"
 
         Just byte ->
