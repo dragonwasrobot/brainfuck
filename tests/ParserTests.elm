@@ -1,6 +1,6 @@
 module ParserTests exposing (..)
 
-import Brainfuck.Parser as Parser exposing (AbstractSyntaxTree(..), Expression(..))
+import Brainfuck.Parser as Parser exposing (AbstractSyntaxTree(..), Command(..), Expression(..))
 import Expect exposing (Expectation)
 import Test exposing (..)
 
@@ -17,16 +17,16 @@ suite =
                     expectedAST =
                         Ok <|
                             AbstractSyntaxTree
-                                [ Block
-                                    [ IncrementByte
-                                    , Block
-                                        [ DecrementPointer
-                                        , IncrementByte
-                                        , IncrementByte
-                                        , IncrementPointer
+                                [ ExpBlock
+                                    [ ExpCommand IncrementByte
+                                    , ExpBlock
+                                        [ ExpCommand DecrementPointer
+                                        , ExpCommand IncrementByte
+                                        , ExpCommand IncrementByte
+                                        , ExpCommand IncrementPointer
                                         ]
-                                    , DecrementByte
-                                    , DecrementByte
+                                    , ExpCommand DecrementByte
+                                    , ExpCommand DecrementByte
                                     ]
                                 ]
                 in

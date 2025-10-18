@@ -1,5 +1,6 @@
 module Brainfuck.Parser exposing
     ( AbstractSyntaxTree(..)
+    , Command(..)
     , Expression(..)
     , parse
     )
@@ -49,8 +50,12 @@ type AbstractSyntaxTree
 
 
 type Expression
-    = Block (List Expression)
-    | IncrementPointer
+    = ExpBlock (List Expression)
+    | ExpCommand Command
+
+
+type Command
+    = IncrementPointer
     | DecrementPointer
     | IncrementByte
     | DecrementByte
@@ -88,7 +93,7 @@ manyHelp p vs =
 
 pBlock : Parser Expression
 pBlock =
-    P.succeed Block
+    P.succeed ExpBlock
         |= brackets (many (P.lazy (\_ -> pExpression)))
 
 
@@ -116,11 +121,12 @@ between opening closing p =
 
 pCommand : Parser Expression
 pCommand =
-    P.oneOf
-        [ P.map (\_ -> IncrementPointer) (P.symbol ">")
-        , P.map (\_ -> DecrementPointer) (P.symbol "<")
-        , P.map (\_ -> IncrementByte) (P.symbol "+")
-        , P.map (\_ -> DecrementByte) (P.symbol "-")
-        , P.map (\_ -> OutputByte) (P.symbol ".")
-        , P.map (\_ -> InputByte) (P.symbol ",")
-        ]
+    P.map ExpCommand <|
+        P.oneOf
+            [ P.map (\_ -> IncrementPointer) (P.symbol ">")
+            , P.map (\_ -> DecrementPointer) (P.symbol "<")
+            , P.map (\_ -> IncrementByte) (P.symbol "+")
+            , P.map (\_ -> DecrementByte) (P.symbol "-")
+            , P.map (\_ -> OutputByte) (P.symbol ".")
+            , P.map (\_ -> InputByte) (P.symbol ",")
+            ]

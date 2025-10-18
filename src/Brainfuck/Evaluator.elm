@@ -1,7 +1,7 @@
 module Brainfuck.Evaluator exposing (evaluate)
 
 import Brainfuck.Ascii as Ascii
-import Brainfuck.Parser as Parser exposing (AbstractSyntaxTree(..), Expression(..))
+import Brainfuck.Parser as Parser exposing (AbstractSyntaxTree(..), Command(..), Expression(..))
 import Brainfuck.VirtualMachine as VirtualMachine exposing (VirtualMachine)
 import List.Extra as List exposing (Step(..))
 
@@ -29,26 +29,11 @@ evaluateExpression expr vmResult =
 
         Ok vm ->
             case expr of
-                Block subExprs ->
+                ExpBlock subExprs ->
                     evaluateBlock subExprs vm
 
-                IncrementPointer ->
-                    handleIncrementPointer vm
-
-                DecrementPointer ->
-                    handleDecrementPointer vm
-
-                IncrementByte ->
-                    handleIncrementByte vm
-
-                DecrementByte ->
-                    handleDecrementByte vm
-
-                OutputByte ->
-                    handleOutputByte vm
-
-                InputByte ->
-                    handleInputByte vm
+                ExpCommand command ->
+                    evaluateCommand command vm
 
 
 evaluateBlock : List Expression -> VirtualMachine -> Result String VirtualMachine
@@ -84,6 +69,28 @@ evaluateBlock exprs vm =
 
     else
         Ok vm
+
+
+evaluateCommand : Command -> VirtualMachine -> Result String VirtualMachine
+evaluateCommand command vm =
+    case command of
+        IncrementPointer ->
+            handleIncrementPointer vm
+
+        DecrementPointer ->
+            handleDecrementPointer vm
+
+        IncrementByte ->
+            handleIncrementByte vm
+
+        DecrementByte ->
+            handleDecrementByte vm
+
+        OutputByte ->
+            handleOutputByte vm
+
+        InputByte ->
+            handleInputByte vm
 
 
 handleIncrementPointer : VirtualMachine -> Result String VirtualMachine
@@ -200,10 +207,11 @@ outputByte cellValue vm =
             Ok { vm | output = newOutput }
 
         Nothing ->
-            Err <|
-                "Tried to output invalid ASCII char: '"
-                    ++ String.fromInt cellValue
-                    ++ "'"
+            let
+                newOutput =
+                    vm.output ++ "0x" ++ String.fromInt cellValue
+            in
+            Ok { vm | output = newOutput }
 
 
 handleInputByte : VirtualMachine -> Result String VirtualMachine
