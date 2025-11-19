@@ -18,7 +18,7 @@
     "test-watch": "npx elm-test --watch"
   },
   "devDependencies": {
-    "elm-test": "^0.19.1-revision16",
+    "elm-test": "^0.19.1-revision17",
     "elm-watch": "^1.2.3",
     "@fortawesome/fontawesome-free": "^7.1.0",
     "@tailwindcss/cli": "^4.1.17",
