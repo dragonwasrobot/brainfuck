@@ -43,9 +43,10 @@ initContext expr vm =
 
 
 type State
-    = Crashed String
+    = Running
+    | Paused
     | Finished
-    | Running
+    | Crashed String
 
 
 type ExpCrumb

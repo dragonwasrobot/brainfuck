@@ -10,6 +10,7 @@ import Html.Events as Events
 import Http exposing (Response(..))
 import List
 import List.Extra as List
+import Process
 import String
 import Task exposing (Task)
 
@@ -75,7 +76,9 @@ type Page
 
 
 type Msg
-    = Evaluate
+    = StartEvaluation
+    | StopEvaluation
+    | ResumeEvaluation
     | EvaluateStep
     | ClearOutput
     | SetCode Code
@@ -92,8 +95,14 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Evaluate ->
-            evaluateProgram False model
+        StartEvaluation ->
+            startEvaluation model
+
+        StopEvaluation ->
+            stopEvaluation model
+
+        ResumeEvaluation ->
+            resumeEvaluation model
 
         EvaluateStep ->
             evaluateStep model
@@ -117,8 +126,8 @@ update msg model =
             loadSourceFile result model
 
 
-evaluateProgram : Bool -> Model -> ( Model, Cmd Msg )
-evaluateProgram strict model =
+startEvaluation : Model -> ( Model, Cmd Msg )
+startEvaluation model =
     let
         parsedProgram =
             model.inputCode
@@ -150,29 +159,51 @@ evaluateProgram strict model =
                     Evaluator.initContext program vm
 
                 runProgramCmd =
-                    Task.perform identity <|
-                        Task.succeed EvaluateStep
+                    Task.perform (\_ -> EvaluateStep) (Process.sleep 1)
             in
-            if strict then
-                let
-                    finalContext =
-                        Evaluator.evaluate newContext
+            ( { model | context = Just newContext }, runProgramCmd )
 
-                    finalResult =
-                        case finalContext.state of
-                            Running ->
-                                Ok ""
 
-                            Crashed reason ->
-                                Err reason
-
-                            Finished ->
-                                Ok finalContext.vm.output
-                in
-                ( { model | context = Just finalContext, result = finalResult }, Cmd.none )
+stopEvaluation : Model -> ( Model, Cmd Msg )
+stopEvaluation model =
+    let
+        pauseEval oldContext =
+            if oldContext.state == Running then
+                Just { oldContext | state = Paused }
 
             else
-                ( { model | context = Just newContext }, runProgramCmd )
+                model.context
+    in
+    case model.context of
+        Nothing ->
+            ( model, Cmd.none )
+
+        Just oldContext ->
+            ( { model | context = pauseEval oldContext }, Cmd.none )
+
+
+resumeEvaluation : Model -> ( Model, Cmd Msg )
+resumeEvaluation model =
+    let
+        resumeEval oldContext =
+            if oldContext.state == Paused then
+                ( Just { oldContext | state = Running }
+                , Task.perform (\_ -> EvaluateStep) (Process.sleep 1)
+                )
+
+            else
+                ( model.context, Cmd.none )
+    in
+    case model.context of
+        Nothing ->
+            ( model, Cmd.none )
+
+        Just oldContext ->
+            let
+                ( newContext, cmd ) =
+                    resumeEval oldContext
+            in
+            ( { model | context = newContext }, cmd )
 
 
 evaluateStep : Model -> ( Model, Cmd Msg )
@@ -189,8 +220,7 @@ evaluateStep model =
 
                 newCmd =
                     if newContext.state == Running then
-                        Task.perform identity <|
-                            Task.succeed EvaluateStep
+                        Task.perform (\_ -> EvaluateStep) (Process.sleep 1)
 
                     else
                         Cmd.none
@@ -200,11 +230,14 @@ evaluateStep model =
                         Running ->
                             Ok ""
 
-                        Crashed reason ->
-                            Err reason
+                        Paused ->
+                            Ok ""
 
                         Finished ->
                             Ok newContext.vm.output
+
+                        Crashed reason ->
+                            Err reason
             in
             ( { model | context = Just newContext, result = newResult }, newCmd )
 
@@ -235,7 +268,7 @@ selectSourceFile archiveEntry model =
         -- prod: /brainfuck/bf-programs/
         -- dev: /bf-programs/
         prefixPath =
-            "/bf-programs/"
+            "/brainfuck/bf-programs/"
 
         filename =
             archiveEntry.id ++ "-" ++ String.toLower archiveEntry.title ++ ".bf"
@@ -761,14 +794,34 @@ viewInterpreterForm model =
                 ]
 
         viewRunButton =
+            let
+                ( msg, icon, label ) =
+                    case model.context of
+                        Nothing ->
+                            ( StartEvaluation, "fa-play", "RUN PROGRAM" )
+
+                        Just context ->
+                            case context.state of
+                                Running ->
+                                    ( StopEvaluation, "fa-pause", "PAUSE PROGRAM" )
+
+                                Paused ->
+                                    ( ResumeEvaluation, "fa-play", "RESUME PROGRAM" )
+
+                                Crashed _ ->
+                                    ( StartEvaluation, "fa-play", "RUN PROGRAM" )
+
+                                Finished ->
+                                    ( StartEvaluation, "fa-play", "RUN PROGRAM" )
+            in
             Html.button
                 [ Attr.id "run-program"
                 , Attr.type_ "submit"
                 , Attr.class "mt-4 p-2 bg-white border text-sm text-left cursor-pointer"
-                , Events.onClick Evaluate
+                , Events.onClick msg
                 ]
-                [ Html.i [ Attr.class "fa-solid fa-play mr-2" ] []
-                , Html.text "RUN PROGRAM"
+                [ Html.i [ Attr.class <| "mr-2 fa-solid " ++ icon ] []
+                , Html.text label
                 ]
 
         viewClearButton =
