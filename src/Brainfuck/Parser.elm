@@ -38,7 +38,7 @@ parse : String -> Result (List P.DeadEnd) AbstractSyntaxTree
 parse source =
     let
         cleanedSource =
-            -- Bit of a hack, should also parse comments
+            -- TODO: Bit of a hack, should also parse comments
             source
                 |> String.filter (\c -> List.member c [ '[', ']', '+', '-', '>', '<', ',', '.' ])
     in

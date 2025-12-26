@@ -1,6 +1,6 @@
 module Main exposing (main)
 
-import Brainfuck.Evaluator as Evaluator
+import Brainfuck.Evaluator as Evaluator exposing (EvaluationContext, State(..))
 import Brainfuck.Parser as Parser
 import Brainfuck.VirtualMachine as VirtualMachine exposing (VirtualMachine)
 import Browser
@@ -11,6 +11,7 @@ import Http exposing (Response(..))
 import List
 import List.Extra as List
 import String
+import Task exposing (Task)
 
 
 
@@ -35,10 +36,10 @@ init : () -> ( Model, Cmd Msg )
 init flags =
     let
         initModel =
-            { vm = VirtualMachine.init []
-            , inputCode = ""
+            { inputCode = ""
             , inputData = ""
             , result = Ok ""
+            , context = Nothing
             , page = InterpreterPage
             }
     in
@@ -55,10 +56,10 @@ type alias Code =
 
 
 type alias Model =
-    { vm : VirtualMachine
-    , inputCode : Code
+    { inputCode : Code
     , inputData : String
     , result : Result String String
+    , context : Maybe EvaluationContext
     , page : Page
     }
 
@@ -75,6 +76,7 @@ type Page
 
 type Msg
     = Evaluate
+    | EvaluateStep
     | ClearOutput
     | SetCode Code
     | SetInput String
@@ -91,7 +93,10 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Evaluate ->
-            evaluateProgram model
+            evaluateProgram False model
+
+        EvaluateStep ->
+            evaluateStep model
 
         ClearOutput ->
             clearOutput model
@@ -112,8 +117,8 @@ update msg model =
             loadSourceFile result model
 
 
-evaluateProgram : Model -> ( Model, Cmd Msg )
-evaluateProgram model =
+evaluateProgram : Bool -> Model -> ( Model, Cmd Msg )
+evaluateProgram strict model =
     let
         parsedProgram =
             model.inputCode
@@ -129,22 +134,79 @@ evaluateProgram model =
                     |> List.map Char.toCode
                 )
                     ++ [ eofByte ]
-
-        newVmResult =
-            case parsedProgram of
-                Err _ ->
-                    -- TODO: Figure out how to convert err to something useful
-                    Err "Failed to parse program due to <deal with DeadEnd output>"
-
-                Ok program ->
-                    Evaluator.evaluate program vm
     in
-    case newVmResult of
-        Ok newVm ->
-            ( { model | vm = newVm, result = Ok newVm.output }, Cmd.none )
+    case parsedProgram of
+        Err _ ->
+            -- TODO: Figure out how to convert err to something useful
+            let
+                error =
+                    Err "Failed to parse program due to <deal with DeadEnd output>"
+            in
+            ( { model | result = error }, Cmd.none )
 
-        Err error ->
-            ( { model | result = Err error }, Cmd.none )
+        Ok program ->
+            let
+                newContext =
+                    Evaluator.initContext program vm
+
+                runProgramCmd =
+                    Task.perform identity <|
+                        Task.succeed EvaluateStep
+            in
+            if strict then
+                let
+                    finalContext =
+                        Evaluator.evaluate newContext
+
+                    finalResult =
+                        case finalContext.state of
+                            Running ->
+                                Ok ""
+
+                            Crashed reason ->
+                                Err reason
+
+                            Finished ->
+                                Ok finalContext.vm.output
+                in
+                ( { model | context = Just finalContext, result = finalResult }, Cmd.none )
+
+            else
+                ( { model | context = Just newContext }, runProgramCmd )
+
+
+evaluateStep : Model -> ( Model, Cmd Msg )
+evaluateStep model =
+    case model.context of
+        Nothing ->
+            -- TODO: Produce error in UI
+            ( { model | result = Err "No context!" }, Cmd.none )
+
+        Just context ->
+            let
+                newContext =
+                    Evaluator.evaluateStep context
+
+                newCmd =
+                    if newContext.state == Running then
+                        Task.perform identity <|
+                            Task.succeed EvaluateStep
+
+                    else
+                        Cmd.none
+
+                newResult =
+                    case newContext.state of
+                        Running ->
+                            Ok ""
+
+                        Crashed reason ->
+                            Err reason
+
+                        Finished ->
+                            Ok newContext.vm.output
+            in
+            ( { model | context = Just newContext, result = newResult }, newCmd )
 
 
 clearOutput : Model -> ( Model, Cmd Msg )
@@ -173,7 +235,7 @@ selectSourceFile archiveEntry model =
         -- prod: /brainfuck/bf-programs/
         -- dev: /bf-programs/
         prefixPath =
-            "/brainfuck/bf-programs/"
+            "/bf-programs/"
 
         filename =
             archiveEntry.id ++ "-" ++ String.toLower archiveEntry.title ++ ".bf"
