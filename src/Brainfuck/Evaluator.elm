@@ -1,17 +1,19 @@
 module Brainfuck.Evaluator exposing
-    ( Breadcrumbs
-    , Crumb(..)
-    , EvaluationContext
+    ( EvaluationContext
+    , ExpCrumb(..)
+    , ExpZipper
     , State(..)
+    , childExp
     , evaluate
     , evaluateStep
-    , followBreadcrumbs
     , initContext
-    , layBreadcrumb
+    , nextSiblingExp
+    , parentExp
+    , previousSiblingExp
     )
 
 import Brainfuck.Ascii as Ascii
-import Brainfuck.Parser exposing (AbstractSyntaxTree(..), Command(..), Expression(..))
+import Brainfuck.Parser exposing (Command(..), Expression(..))
 import Brainfuck.VirtualMachine as VirtualMachine exposing (VirtualMachine)
 import List
 import List.Extra as List exposing (Step(..))
@@ -23,19 +25,20 @@ import Maybe.Extra as Maybe
 
 
 type alias EvaluationContext =
-    { ast : AbstractSyntaxTree
-    , state : State
+    { state : State
     , vm : VirtualMachine
-    , breadcrumbs : Breadcrumbs
+    , zipper : ExpZipper
     }
 
 
-initContext : AbstractSyntaxTree -> VirtualMachine -> EvaluationContext
-initContext ast vm =
-    { ast = ast
-    , state = Running
+initContext : Expression -> VirtualMachine -> EvaluationContext
+initContext expr vm =
+    { state = Running
     , vm = vm
-    , breadcrumbs = []
+    , zipper =
+        { expression = expr
+        , breadcrumbs = []
+        }
     }
 
 
@@ -45,55 +48,142 @@ type State
     | Running
 
 
-{-| We define a single (bread) crumb as a list of integer indices.
-
-If we look at the code snippet:
-
-    +++
-    [
-      > +++++ ++
-      > +
-      [>>>]
-    ]
-
-we can represent the first parts of it as the `AbstractSyntaxTree`:
-
-    AbstractSyntaxTree [ ExpCommand IncrementByte
-                       , ExpCommand IncrementByte
-                       , ExpCommand IncrementByte
-                       , ExpBlock [ IncrementPointer
-                                  , IncrementByte
-                                  , IncrementByte
-                                  ...
-                                  ]
-                       ...
-                       ]
-
-If we start evaluating this we get the following breadcrumbs:
-
-      []   -- Initial step of program
-      [Crumb 0]  -- IncrementByte
-      [Crumb 1]  -- IncrementByte
-      [Crumb 2]  -- IncrementByte
-      [Crumb 3]  -- Initial step of ExpBlock
-      [Crumb 3, Crumb 0]  -- IncrementPointer inside ExpBlock
-      [Crumb 3, Crumb 1]  -- IncrementByte inside ExpBlock
-      [Crumb 3, Crumb 2]  -- IncrementByte inside ExpBlock
-      [Crumb 3]  -- recheck ExpBlock
-      []  -- Final step of program
-      ...
-
-Using this relatively simple structure of integer indices where the absence of
-an integer means we are in an initial state of the program or block should be
-enough to cover the limited control flow of Brainfuck.
-
--}
-type alias Breadcrumbs =
-    List Crumb
+type ExpCrumb
+    = ExpCrumb Bool (List Expression) (List Expression)
 
 
-type Crumb
-    = Crumb Int
+type alias ExpZipper =
+    { expression : Expression, breadcrumbs : List ExpCrumb }
+
+
+parentExp : ExpZipper -> Maybe ExpZipper
+parentExp { expression, breadcrumbs } =
+    case breadcrumbs of
+        [] ->
+            Nothing
+
+        (ExpCrumb isRoot lefts rights) :: crumbs ->
+            let
+                newExp =
+                    if isRoot then
+                        ExpRoot (List.reverse (expression :: lefts) ++ rights)
+
+                    else
+                        ExpBlock (List.reverse (expression :: lefts) ++ rights)
+            in
+            Just <| ExpZipper newExp crumbs
+
+
+childExp : ExpZipper -> Maybe ExpZipper
+childExp { expression, breadcrumbs } =
+    let
+        firstChildExp isRoot childExps =
+            case childExps of
+                [] ->
+                    Nothing
+
+                child :: children ->
+                    let
+                        newBreadcrumbs =
+                            ExpCrumb isRoot [] children :: breadcrumbs
+                    in
+                    Just { expression = child, breadcrumbs = newBreadcrumbs }
+    in
+    case expression of
+        ExpRoot childExps ->
+            firstChildExp True childExps
+
+        ExpBlock childExps ->
+            firstChildExp False childExps
+
+        ExpCommand command ->
+            Nothing
+
+
+nextSiblingExp : ExpZipper -> Maybe ExpZipper
+nextSiblingExp { expression, breadcrumbs } =
+    let
+        nextSibling (ExpCrumb isRoot lefts rights) crumbs =
+            case rights of
+                [] ->
+                    Nothing
+
+                newExpression :: newRights ->
+                    let
+                        newCrumb =
+                            ExpCrumb isRoot (expression :: lefts) newRights
+                    in
+                    Just { expression = newExpression, breadcrumbs = newCrumb :: crumbs }
+    in
+    case ( expression, breadcrumbs ) of
+        ( ExpRoot _, _ ) ->
+            -- Root -> no siblings
+            Nothing
+
+        ( _, [] ) ->
+            -- No crumbs -> no siblings
+            Nothing
+
+        ( _, crumb :: crumbs ) ->
+            nextSibling crumb crumbs
+
+
+previousSiblingExp : ExpZipper -> Maybe ExpZipper
+previousSiblingExp { expression, breadcrumbs } =
+    let
+        previousSibling (ExpCrumb isRoot lefts rights) crumbs =
+            case lefts of
+                [] ->
+                    Nothing
+
+                newExpression :: newLefts ->
+                    let
+                        newCrumb =
+                            ExpCrumb isRoot newLefts (expression :: rights)
+                    in
+                    Just { expression = newExpression, breadcrumbs = newCrumb :: crumbs }
+    in
+    case ( expression, breadcrumbs ) of
+        ( ExpRoot _, _ ) ->
+            -- Root -> no siblings
+            Nothing
+
+        ( _, [] ) ->
+            -- No crumbs -> no siblings
+            Nothing
+
+        ( _, crumb :: crumbs ) ->
+            previousSibling crumb crumbs
+
+
+nextExp : ExpZipper -> Maybe ExpZipper
+nextExp zipper =
+    let
+        isExpRoot exp =
+            case exp of
+                ExpRoot _ ->
+                    True
+
+                _ ->
+                    False
+
+        optNewZipper =
+            case nextSiblingExp zipper of
+                Just newZipper ->
+                    Just newZipper
+
+                Nothing ->
+                    parentExp zipper
+    in
+    optNewZipper
+        |> Maybe.andThen
+            (\newZipper ->
+                if isExpRoot newZipper.expression then
+                    Nothing
+
+                else
+                    Just newZipper
+            )
 
 
 
@@ -119,24 +209,22 @@ evaluate context =
 evaluateStep : EvaluationContext -> EvaluationContext
 evaluateStep context =
     let
-        optExpr =
-            followBreadcrumbs context.ast (Debug.log "breadcrumbs" context.breadcrumbs)
+        zipper =
+            context.zipper
     in
     if not <| isRunning context then
         context
 
     else
-        case optExpr of
-            Nothing ->
-                { context | state = Crashed "Failed to follow breadcrumbs" }
-
-            Just expr ->
-                evaluateExpression expr context
+        evaluateExpression context
 
 
-evaluateExpression : Expression -> EvaluationContext -> EvaluationContext
-evaluateExpression expr context =
-    case expr of
+evaluateExpression : EvaluationContext -> EvaluationContext
+evaluateExpression context =
+    case context.zipper.expression of
+        ExpRoot subExprs ->
+            evaluateRoot subExprs context
+
         ExpBlock subExprs ->
             evaluateBlock subExprs context
 
@@ -144,28 +232,49 @@ evaluateExpression expr context =
             evaluateCommand command context
 
 
+evaluateRoot : List Expression -> EvaluationContext -> EvaluationContext
+evaluateRoot exprs context =
+    let
+        oldZipper =
+            context.zipper
+
+        optNewZipper =
+            childExp oldZipper
+    in
+    case optNewZipper of
+        Nothing ->
+            { context | state = Crashed "No program to run!" }
+
+        Just newZipper ->
+            { context | zipper = newZipper }
+
+
 evaluateBlock : List Expression -> EvaluationContext -> EvaluationContext
 evaluateBlock exprs context =
     let
-        vm =
-            context.vm
-
-        pointer =
-            vm.pointer
+        oldZipper =
+            context.zipper
 
         cellValue =
-            vm |> VirtualMachine.getCell pointer |> Maybe.withDefault 0
+            context.vm
+                |> VirtualMachine.getCell context.vm.pointer
+                |> Maybe.withDefault 0
     in
-    if List.isEmpty context.breadcrumbs || cellValue > 0 then
-        { context | breadcrumbs = layBreadcrumb context.ast (ExpBlock exprs) context.breadcrumbs }
+    if cellValue > 0 then
+        case childExp oldZipper of
+            Nothing ->
+                { context | state = Crashed "No program to run!" }
+
+            Just newZipper ->
+                { context | zipper = newZipper }
 
     else
-        let
-            -- TODO Need to do something cleaner
-            bogusExp =
-                ExpCommand IncrementByte
-        in
-        { context | breadcrumbs = layBreadcrumb context.ast bogusExp context.breadcrumbs }
+        case nextExp oldZipper of
+            Nothing ->
+                { context | state = Finished }
+
+            Just newZipper ->
+                { context | zipper = newZipper }
 
 
 evaluateCommand : Command -> EvaluationContext -> EvaluationContext
@@ -196,104 +305,12 @@ evaluateCommand command context =
             { context | state = Crashed reason }
 
         Ok newVm ->
-            let
-                newBreadcrumbs =
-                    layBreadcrumb
-                        context.ast
-                        (ExpCommand command)
-                        context.breadcrumbs
-            in
-            if List.isEmpty newBreadcrumbs then
-                { context | vm = newVm, state = Finished }
+            case nextExp context.zipper of
+                Nothing ->
+                    { context | vm = newVm, state = Finished }
 
-            else
-                { context | vm = newVm, breadcrumbs = newBreadcrumbs }
-
-
-{-| Follows `Breadcrumbs` down through the `AbstractSyntaxTree`.
-
-Cases:
-
-  - Base: Breadcrumbs == [] -> eval block expression.
-  - Ind1: Breadcrumbs == [idx] -> eval expression at index `idx` in block.
-  - Ind2: Breadcrumbs == [idx1 | idx2] -> eval expr at index `idx2` inside block at index `idx1`.
-
--}
-followBreadcrumbs : AbstractSyntaxTree -> Breadcrumbs -> Maybe Expression
-followBreadcrumbs (AbstractSyntaxTree exprs) breadcrumbs =
-    let
-        followCrumb : Crumb -> Maybe Expression -> Maybe Expression
-        followCrumb (Crumb index) =
-            Maybe.andThen
-                (\exp ->
-                    case exp of
-                        ExpBlock subExprs ->
-                            List.getAt index subExprs
-
-                        ExpCommand command ->
-                            Just (ExpCommand command)
-                )
-    in
-    List.foldl
-        followCrumb
-        (Just (ExpBlock exprs))
-        breadcrumbs
-
-
-parentExpression : AbstractSyntaxTree -> Breadcrumbs -> Maybe Expression
-parentExpression ast breadcrumbs =
-    breadcrumbs
-        |> List.unconsLast
-        |> Maybe.andThen
-            (\( _, parentcrumbs ) ->
-                followBreadcrumbs ast parentcrumbs
-            )
-
-
-{-| Lays new `Breadcrumbs` down through the `AbstractSyntaxTree`.
-
-Cases:
-
-  - expr == ExpBlock -> breadcrumbs |> push 0
-  - expr == ExpCommand (middle of tree) -> breadcrumbs |> get lastIdx |> plus 1
-  - expr == ExpCommand (last leaf) -> breadcrumbs |> pop lastIdx
-
--}
-layBreadcrumb : AbstractSyntaxTree -> Expression -> Breadcrumbs -> Breadcrumbs
-layBreadcrumb ast expr breadcrumbs =
-    let
-        optParentExpr =
-            parentExpression ast breadcrumbs
-
-        optLastCrumbValue =
-            breadcrumbs |> List.last |> Maybe.unwrap 0 (\(Crumb idx) -> idx)
-
-        hasNextSibling =
-            optParentExpr
-                |> Maybe.unwrap False
-                    (\parentExpr ->
-                        case parentExpr of
-                            ExpCommand _ ->
-                                False
-
-                            ExpBlock exprs ->
-                                List.length exprs - 1 > optLastCrumbValue
-                    )
-    in
-    case expr of
-        ExpBlock _ ->
-            List.append breadcrumbs [ Crumb 0 ]
-
-        ExpCommand _ ->
-            if hasNextSibling then
-                List.updateAt (List.length breadcrumbs - 1)
-                    (\(Crumb idx) -> Crumb (idx + 1))
-                    breadcrumbs
-
-            else
-                breadcrumbs
-                    |> List.unconsLast
-                    |> Maybe.unwrap [] Tuple.second
+                Just newZipper ->
+                    { context | vm = newVm, zipper = newZipper }
 
 
 handleIncrementPointer : VirtualMachine -> Result String VirtualMachine

@@ -1,13 +1,14 @@
 module EvaluatorTests exposing (..)
 
-import Brainfuck.Evaluator as Evaluator exposing (Breadcrumbs, Crumb(..))
-import Brainfuck.Parser exposing (AbstractSyntaxTree(..), Command(..), Expression(..))
+import Brainfuck.Evaluator as Evaluator exposing (ExpCrumb(..), ExpZipper)
+import Brainfuck.Parser exposing (Command(..), Expression(..))
 import Expect exposing (Expectation)
 import Test exposing (..)
 
 
 referenceAst =
-    AbstractSyntaxTree
+    -- The program: [+[<++>]--]
+    ExpRoot
         [ ExpBlock
             [ ExpCommand IncrementByte
             , ExpBlock
@@ -25,53 +26,178 @@ referenceAst =
 suite : Test
 suite =
     describe "Evaluator"
-        [ describe "followBreadcrumbs"
-            [ test "Can follow to expression" <|
+        [ describe "Zipper"
+            [ test "Can move down to first child expression in block" <|
                 \_ ->
                     let
-                        inputBreadcrumbs =
-                            [ Crumb 0, Crumb 1, Crumb 3 ]
+                        inputExp =
+                            ExpRoot
+                                [ ExpCommand DecrementPointer
+                                , ExpCommand IncrementByte
+                                , ExpCommand IncrementByte
+                                ]
 
-                        expectedExpr =
-                            Just <| ExpCommand IncrementPointer
+                        inputZipper =
+                            { expression = inputExp
+                            , breadcrumbs = []
+                            }
 
-                        outputExpr =
-                            Evaluator.followBreadcrumbs referenceAst inputBreadcrumbs
+                        outputZipper =
+                            Evaluator.childExp inputZipper
+
+                        expectedZipper =
+                            Just
+                                { expression = ExpCommand DecrementPointer
+                                , breadcrumbs =
+                                    [ ExpCrumb True
+                                        []
+                                        [ ExpCommand IncrementByte
+                                        , ExpCommand IncrementByte
+                                        ]
+                                    ]
+                                }
                     in
-                    Expect.equal expectedExpr outputExpr
+                    Expect.equal expectedZipper outputZipper
             ]
-        , describe "layBreadcrumb"
-            [ test "Can find next expression: middle of block" <|
-                \_ ->
-                    let
-                        inputExpr =
-                            ExpCommand IncrementByte
+        , test "Can move up to parent expression in block" <|
+            \_ ->
+                let
+                    inputZipper =
+                        { expression = ExpCommand IncrementByte
+                        , breadcrumbs =
+                            [ ExpCrumb True
+                                [ ExpCommand IncrementByte
+                                , ExpCommand DecrementPointer
+                                ]
+                                []
+                            ]
+                        }
 
-                        inputBreadcrumbs =
-                            [ Crumb 0, Crumb 1, Crumb 2 ]
+                    outputZipper =
+                        Evaluator.parentExp inputZipper
 
-                        expectedBreadcrumbs =
-                            [ Crumb 0, Crumb 1, Crumb 3 ]
+                    expectedZipper =
+                        Just
+                            { expression =
+                                ExpRoot
+                                    [ ExpCommand DecrementPointer
+                                    , ExpCommand IncrementByte
+                                    , ExpCommand IncrementByte
+                                    ]
+                            , breadcrumbs = []
+                            }
+                in
+                Expect.equal expectedZipper outputZipper
+        , test "Can move to next sibling expression in block" <|
+            \_ ->
+                let
+                    inputZipper =
+                        { expression = ExpCommand DecrementPointer
+                        , breadcrumbs =
+                            [ ExpCrumb False
+                                []
+                                [ ExpCommand IncrementByte
+                                , ExpCommand IncrementByte
+                                ]
+                            ]
+                        }
 
-                        outputBreadcrumbs =
-                            Evaluator.layBreadcrumb referenceAst inputExpr inputBreadcrumbs
-                    in
-                    Expect.equal expectedBreadcrumbs outputBreadcrumbs
-            , test "Can find next expression: end of block" <|
-                \_ ->
-                    let
-                        inputExpr =
-                            ExpCommand IncrementPointer
+                    outputZipper =
+                        Evaluator.nextSiblingExp inputZipper
 
-                        inputBreadcrumbs =
-                            [ Crumb 0, Crumb 1, Crumb 3 ]
+                    expectedZipper =
+                        Just
+                            { expression = ExpCommand IncrementByte
+                            , breadcrumbs =
+                                [ ExpCrumb False
+                                    [ ExpCommand DecrementPointer ]
+                                    [ ExpCommand IncrementByte ]
+                                ]
+                            }
+                in
+                Expect.equal expectedZipper outputZipper
+        , test "Moving right and left gives returns original zipper" <|
+            \_ ->
+                let
+                    inputZipper =
+                        { expression = ExpCommand DecrementPointer
+                        , breadcrumbs =
+                            [ ExpCrumb False
+                                []
+                                [ ExpCommand IncrementByte
+                                , ExpCommand IncrementByte
+                                ]
+                            , ExpCrumb True
+                                [ ExpCommand IncrementByte ]
+                                []
+                            ]
+                        }
 
-                        expectedBreadcrumbs =
-                            [ Crumb 0, Crumb 1 ]
+                    outputZipper =
+                        inputZipper
+                            |> Evaluator.nextSiblingExp
+                            |> Maybe.andThen Evaluator.nextSiblingExp
+                            |> Maybe.andThen Evaluator.parentExp
+                            |> Maybe.andThen Evaluator.childExp
 
-                        outputBreadcrumbs =
-                            Evaluator.layBreadcrumb referenceAst inputExpr inputBreadcrumbs
-                    in
-                    Expect.equal expectedBreadcrumbs outputBreadcrumbs
-            ]
+                    expectedZipper =
+                        Just
+                            { expression = ExpCommand DecrementPointer
+                            , breadcrumbs =
+                                [ ExpCrumb False
+                                    []
+                                    [ ExpCommand IncrementByte
+                                    , ExpCommand IncrementByte
+                                    ]
+                                , ExpCrumb True
+                                    [ ExpCommand IncrementByte ]
+                                    []
+                                ]
+                            }
+                in
+                Expect.equal expectedZipper outputZipper
+        , test "Can move to previous sibling expression in block" <|
+            \_ ->
+                let
+                    inputZipper =
+                        { expression = ExpCommand IncrementByte
+                        , breadcrumbs =
+                            [ ExpCrumb False
+                                [ ExpCommand DecrementPointer ]
+                                [ ExpCommand IncrementByte
+                                ]
+                            ]
+                        }
+
+                    outputZipper =
+                        Evaluator.previousSiblingExp inputZipper
+
+                    expectedZipper =
+                        Just
+                            { expression = ExpCommand DecrementPointer
+                            , breadcrumbs =
+                                [ ExpCrumb False
+                                    []
+                                    [ ExpCommand IncrementByte
+                                    , ExpCommand IncrementByte
+                                    ]
+                                ]
+                            }
+                in
+                Expect.equal expectedZipper outputZipper
+        , test "Can't move to a parent expression of root" <|
+            \_ ->
+                let
+                    inputZipper =
+                        { expression = ExpRoot [ ExpCommand DecrementPointer ]
+                        , breadcrumbs = []
+                        }
+
+                    outputZipper =
+                        Evaluator.parentExp inputZipper
+
+                    expectedZipper =
+                        Nothing
+                in
+                Expect.equal expectedZipper outputZipper
         ]

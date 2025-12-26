@@ -1,6 +1,5 @@
 module Brainfuck.Parser exposing
-    ( AbstractSyntaxTree(..)
-    , Command(..)
+    ( Command(..)
     , Expression(..)
     , parse
     )
@@ -9,7 +8,7 @@ import Parser as P exposing ((|.), (|=), Parser, Step(..))
 
 
 {-| The `parse` function takes a Brainfuck source program as a `String` and
-constructs an `AbstractSyntaxTree` of the program.
+constructs an `ExpRoot` of the program.
 
 Syntax:
 
@@ -34,7 +33,7 @@ Semantics:
   - ']' -- jump back to the matching `[` unless the byte at data pointer is zero
 
 -}
-parse : String -> Result (List P.DeadEnd) AbstractSyntaxTree
+parse : String -> Result (List P.DeadEnd) Expression
 parse source =
     let
         cleanedSource =
@@ -45,12 +44,9 @@ parse source =
     P.run pProgram cleanedSource
 
 
-type AbstractSyntaxTree
-    = AbstractSyntaxTree (List Expression)
-
-
 type Expression
-    = ExpBlock (List Expression)
+    = ExpRoot (List Expression)
+    | ExpBlock (List Expression)
     | ExpCommand Command
 
 
@@ -63,9 +59,9 @@ type Command
     | InputByte
 
 
-pProgram : Parser AbstractSyntaxTree
+pProgram : Parser Expression
 pProgram =
-    P.map AbstractSyntaxTree (many pExpression)
+    P.map ExpRoot (many pExpression)
 
 
 pExpression : Parser Expression
