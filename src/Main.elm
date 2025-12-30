@@ -19,7 +19,7 @@ import Task exposing (Task)
 -- ** Main
 
 
-main : Program () Model Msg
+main : Program Flags Model Msg
 main =
     Browser.element
         { init = init
@@ -29,15 +29,19 @@ main =
         }
 
 
+type alias Flags =
+    { isProd : Bool }
+
+
 
 -- ** Model
 
 
-init : () -> ( Model, Cmd Msg )
+init : Flags -> ( Model, Cmd Msg )
 init flags =
     let
         initModel =
-            { isProd = True
+            { isProd = flags.isProd
             , inputCode = ""
             , inputData = ""
             , form = Initial

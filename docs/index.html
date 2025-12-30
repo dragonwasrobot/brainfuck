@@ -14,8 +14,13 @@
   <body class="bg-slate-50">
     <div id="elm-main"></div>
     <script>
-     var app = Elm.Main.init({
-         node: document.getElementById('elm-main')
+     const isProd = false; // Set via build.sh
+
+     const app = Elm.Main.init({
+         node: document.getElementById('elm-main'),
+         flags: {
+             isProd: isProd
+         }
      });
     </script>
   </body>

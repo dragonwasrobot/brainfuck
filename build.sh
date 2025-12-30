@@ -15,6 +15,9 @@ mkdir -p docs/fontawesome
 cp -R node_modules/@fortawesome/fontawesome-free/css docs/fontawesome
 cp -R node_modules/@fortawesome/fontawesome-free/webfonts docs/fontawesome
 
+# Set flags in index.html
+sed -i 's/isProd = false/isProd = true/g' docs/index.html
+
 # Build Elm
 js="docs/elm.js"
 elm make --optimize --output=$js src/Main.elm

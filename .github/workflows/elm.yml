@@ -75,7 +75,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v4
         with:
-          node-version: '22.18'
+          node-version: '24.12'
 
       - name: Compile and minimize project
         run: |
