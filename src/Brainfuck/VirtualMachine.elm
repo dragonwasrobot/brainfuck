@@ -1,8 +1,5 @@
 module Brainfuck.VirtualMachine exposing (Cells, Index, VirtualMachine, getCell, init, setCell)
 
-import Array exposing (Array)
-
-
 {-| Machine Model
 
 The machine model we are going to use for this interpreter is very simple:
@@ -21,6 +18,10 @@ The machine model we are going to use for this interpreter is very simple:
     encoding.
 
 -}
+
+import Array exposing (Array)
+
+
 type alias Index =
     Int
 

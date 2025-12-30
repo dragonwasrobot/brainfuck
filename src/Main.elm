@@ -39,8 +39,7 @@ init flags =
         initModel =
             { inputCode = ""
             , inputData = ""
-            , result = Ok ""
-            , context = Nothing
+            , form = Initial
             , page = InterpreterPage
             }
     in
@@ -59,10 +58,15 @@ type alias Code =
 type alias Model =
     { inputCode : Code
     , inputData : String
-    , result : Result String String
-    , context : Maybe EvaluationContext
+    , form : FormState
     , page : Page
     }
+
+
+type FormState
+    = Initial
+    | Failed String
+    | Loaded EvaluationContext
 
 
 type Page
@@ -132,119 +136,132 @@ startEvaluation model =
         parsedProgram =
             model.inputCode
                 |> Parser.parse
-
-        eofByte =
-            0
-
-        vm =
-            VirtualMachine.init <|
-                (model.inputData
-                    |> String.toList
-                    |> List.map Char.toCode
-                )
-                    ++ [ eofByte ]
     in
     case parsedProgram of
         Err _ ->
             -- TODO: Figure out how to convert err to something useful
             let
                 error =
-                    Err "Failed to parse program due to <deal with DeadEnd output>"
+                    "Failed to parse program due to <deal with DeadEnd output>"
             in
-            ( { model | result = error }, Cmd.none )
+            ( { model | form = Failed error }, Cmd.none )
 
         Ok program ->
             let
-                newContext =
-                    Evaluator.initContext program vm
-
-                runProgramCmd =
-                    Task.perform (\_ -> EvaluateStep) (Process.sleep 1)
+                newForm =
+                    model.inputData
+                        |> resetVirtualMachine
+                        |> Evaluator.initContext program
+                        |> Loaded
             in
-            ( { model | context = Just newContext }, runProgramCmd )
+            ( { model | form = newForm }, stepCmd )
 
 
 stopEvaluation : Model -> ( Model, Cmd Msg )
 stopEvaluation model =
     let
-        pauseEval oldContext =
-            if oldContext.state == Running then
-                Just { oldContext | state = Paused }
+        pauseEval context =
+            if context.state == Running then
+                { context | state = Paused }
 
             else
-                model.context
+                context
     in
-    case model.context of
-        Nothing ->
+    case model.form of
+        Initial ->
             ( model, Cmd.none )
 
-        Just oldContext ->
-            ( { model | context = pauseEval oldContext }, Cmd.none )
+        Failed _ ->
+            ( model, Cmd.none )
+
+        Loaded context ->
+            ( { model | form = Loaded <| pauseEval context }, Cmd.none )
 
 
 resumeEvaluation : Model -> ( Model, Cmd Msg )
 resumeEvaluation model =
     let
-        resumeEval oldContext =
-            if oldContext.state == Paused then
-                ( Just { oldContext | state = Running }
-                , Task.perform (\_ -> EvaluateStep) (Process.sleep 1)
-                )
+        resumeEval context =
+            if context.state == Paused then
+                ( { context | state = Running }, stepCmd )
 
             else
-                ( model.context, Cmd.none )
+                ( context, Cmd.none )
     in
-    case model.context of
-        Nothing ->
+    case model.form of
+        Initial ->
             ( model, Cmd.none )
 
-        Just oldContext ->
+        Failed _ ->
+            ( model, Cmd.none )
+
+        Loaded context ->
             let
                 ( newContext, cmd ) =
-                    resumeEval oldContext
+                    resumeEval context
             in
-            ( { model | context = newContext }, cmd )
+            ( { model | form = Loaded newContext }, cmd )
 
 
 evaluateStep : Model -> ( Model, Cmd Msg )
 evaluateStep model =
-    case model.context of
-        Nothing ->
-            -- TODO: Produce error in UI
-            ( { model | result = Err "No context!" }, Cmd.none )
+    case model.form of
+        Initial ->
+            ( model, Cmd.none )
 
-        Just context ->
+        Failed _ ->
+            ( model, Cmd.none )
+
+        Loaded context ->
             let
                 newContext =
                     Evaluator.evaluateStep context
 
                 newCmd =
                     if newContext.state == Running then
-                        Task.perform (\_ -> EvaluateStep) (Process.sleep 1)
+                        stepCmd
 
                     else
                         Cmd.none
-
-                newResult =
-                    case newContext.state of
-                        Running ->
-                            Ok ""
-
-                        Paused ->
-                            Ok ""
-
-                        Finished ->
-                            Ok newContext.vm.output
-
-                        Crashed reason ->
-                            Err reason
             in
-            ( { model | context = Just newContext, result = newResult }, newCmd )
+            ( { model | form = Loaded newContext }, newCmd )
+
+
+stepCmd : Cmd Msg
+stepCmd =
+    -- NOTE: Faster but blocking (can lead to freeze): Task.perform identity (Task.succeed EvaluateStep)
+    Task.perform (\_ -> EvaluateStep) (Process.sleep 1)
 
 
 clearOutput : Model -> ( Model, Cmd Msg )
 clearOutput model =
-    ( { model | result = Ok "" }, Cmd.none )
+    case model.form of
+        Initial ->
+            -- Nothing to clear
+            ( model, Cmd.none )
+
+        Failed _ ->
+            -- Nothing to clear
+            ( model, Cmd.none )
+
+        Loaded context ->
+            let
+                newContext =
+                    { context | vm = resetVirtualMachine model.inputData }
+            in
+            ( { model | form = Loaded newContext }, Cmd.none )
+
+
+resetVirtualMachine : String -> VirtualMachine
+resetVirtualMachine data =
+    let
+        eofByte =
+            0
+
+        inputs =
+            data |> String.toList |> List.map Char.toCode
+    in
+    VirtualMachine.init <| inputs ++ [ eofByte ]
 
 
 setCode : Code -> Model -> ( Model, Cmd Msg )
@@ -268,7 +285,7 @@ selectSourceFile archiveEntry model =
         -- prod: /brainfuck/bf-programs/
         -- dev: /bf-programs/
         prefixPath =
-            "/brainfuck/bf-programs/"
+            "/bf-programs/"
 
         filename =
             archiveEntry.id ++ "-" ++ String.toLower archiveEntry.title ++ ".bf"
@@ -796,11 +813,15 @@ viewInterpreterForm model =
         viewRunButton =
             let
                 ( msg, icon, label ) =
-                    case model.context of
-                        Nothing ->
+                    case model.form of
+                        Initial ->
                             ( StartEvaluation, "fa-play", "RUN PROGRAM" )
 
-                        Just context ->
+                        Failed _ ->
+                            -- TODO: Present error in UI
+                            ( StartEvaluation, "fa-play", "RUN PROGRAM" )
+
+                        Loaded context ->
                             case context.state of
                                 Running ->
                                     ( StopEvaluation, "fa-pause", "PAUSE PROGRAM" )
@@ -845,13 +866,41 @@ viewInterpreterForm model =
                         |> List.concat
                         |> String.fromList
 
-                ( status, response ) =
-                    case model.result of
-                        Err error ->
-                            ( "ERROR", error )
+                stateToLabel state =
+                    case state of
+                        Running ->
+                            "Running"
 
-                        Ok result ->
-                            ( "SUCCESS", chunkString result )
+                        Paused ->
+                            "Paused"
+
+                        Finished ->
+                            "Finished"
+
+                        Crashed reason ->
+                            "Crash: " ++ reason
+
+                status =
+                    case model.form of
+                        Initial ->
+                            "Initial"
+
+                        Failed reason ->
+                            "Failed: " ++ reason
+
+                        Loaded context ->
+                            context.state |> stateToLabel
+
+                response =
+                    case model.form of
+                        Initial ->
+                            ""
+
+                        Failed reason ->
+                            ""
+
+                        Loaded context ->
+                            context.vm.output
             in
             Html.div []
                 [ Html.div
@@ -875,7 +924,7 @@ viewInterpreterForm model =
                     [ Html.span [ Attr.class "w-1/6" ] [ Html.text "DATA" ]
                     , Html.pre
                         [ Attr.id "code-output"
-                        , Attr.class "w-5/6 border-none outline-none resize-none"
+                        , Attr.class "w-5/6 border-none outline-none resize-none overflow-x-scroll"
                         ]
                         [ Html.text response ]
                     ]
