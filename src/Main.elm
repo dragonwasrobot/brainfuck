@@ -37,7 +37,8 @@ init : () -> ( Model, Cmd Msg )
 init flags =
     let
         initModel =
-            { inputCode = ""
+            { isProd = True
+            , inputCode = ""
             , inputData = ""
             , form = Initial
             , page = InterpreterPage
@@ -56,7 +57,8 @@ type alias Code =
 
 
 type alias Model =
-    { inputCode : Code
+    { isProd : Bool
+    , inputCode : Code
     , inputData : String
     , form : FormState
     , page : Page
@@ -282,10 +284,12 @@ setPage page model =
 selectSourceFile : ArchiveEntry -> Model -> ( Model, Cmd Msg )
 selectSourceFile archiveEntry model =
     let
-        -- prod: /brainfuck/bf-programs/
-        -- dev: /bf-programs/
         prefixPath =
-            "/bf-programs/"
+            if model.isProd then
+                "/brainfuck/bf-programs/"
+
+            else
+                "/bf-programs/"
 
         filename =
             archiveEntry.id ++ "-" ++ String.toLower archiveEntry.title ++ ".bf"
