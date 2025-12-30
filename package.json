@@ -9,17 +9,13 @@
   },
   "scripts": {
     "css": "npx @tailwindcss/cli -i docs/style.css -o docs/main.css",
-    "css-watch": "npx @tailwindcss/cli -i docs/style.css -o docs/main.css --watch",
-    "compile": "npx elm-watch make",
-    "compile-watch": "npx elm-watch hot",
-    "local-server": "cd docs && python3 -m http.server",
+    "compile": "elm make --debug --output=docs/elm.min.js src/Main.elm",
+    "serve": "cd docs && python3 -m http.server",
     "format": "npx elm-format --validate src",
-    "test": "npx elm-test tests",
-    "test-watch": "npx elm-test --watch"
+    "test": "npx elm-test tests"
   },
   "devDependencies": {
     "elm-test": "^0.19.1-revision17",
-    "elm-watch": "^1.2.3",
     "@fortawesome/fontawesome-free": "^7.1.0",
     "@tailwindcss/cli": "^4.1.18",
     "tailwindcss": "^4.1.18"

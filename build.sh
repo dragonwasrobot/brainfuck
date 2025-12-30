@@ -16,7 +16,21 @@ cp -R node_modules/@fortawesome/fontawesome-free/css docs/fontawesome
 cp -R node_modules/@fortawesome/fontawesome-free/webfonts docs/fontawesome
 
 # Set flags in index.html
-sed -i 's/isProd = false/isProd = true/g' docs/index.html
+OS="$(uname)"
+case $OS in
+    Linux)
+        sed -i 's/isProd = false/isProd = true/g' docs/index.html
+        ;;
+
+    Darwin)
+        sed -i '' 's/isProd = false/isProd = true/g' docs/index.html
+        ;;
+
+    *)
+        echo "Unsupported OS"
+        exit 1
+        ;;
+esac
 
 # Build Elm
 js="docs/elm.js"
