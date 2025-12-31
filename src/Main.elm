@@ -421,16 +421,22 @@ viewAside : Html msg
 viewAside =
     let
         paperTapeHoles =
-            "text-sm bg-[url(./circle.svg)] bg-center bg-repeat-y bg-size-[1.25em]"
+            "grow text-sm bg-[url(./circle.svg)] mt-4 bg-top bg-repeat-y bg-size-[1.25em]"
 
         paperTapeBorder =
-            "w-1/11 border-[0.125em] border-dashed-60 border-l-0 border-t-0 border-b-0 border-black"
+            "w-[0.1em] border-dashed-[1.75em] border-l-0 border-t-0 border-b-0"
     in
     Html.aside
         [ Attr.id "paper-strip"
-        , Attr.class <| paperTapeBorder ++ " " ++ paperTapeHoles
+        , Attr.class "w-1/11 flex"
         ]
-        []
+        [ Html.div [ Attr.id "holes", Attr.class paperTapeHoles ] []
+        , Html.div [ Attr.id "ripped-border", Attr.class paperTapeBorder ] []
+        ]
+
+
+
+-- *** Reference manual
 
 
 viewReferenceManual : Html Msg
