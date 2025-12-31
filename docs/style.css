@@ -10,13 +10,12 @@
 
 /* Defines a utility class for rendering a dashed border (only works for
    vertical borders) that is identical on both Chrome- and Firefox-based
-   browsers.
-
-   The argument defines the spacing between the dashes in the range 0 - 100; the
-   higher the value the bigger the spacing.
+   browsers, e.g. border-dashed-[1.75em] creates a dashed border where each
+   section is 1.75em in length.
  */
 @utility border-dashed-* {
-  border-image-source: linear-gradient(to bottom, transparent 50%, #000 50%);
-  border-image-repeat: repeat;
-  border-image-slice: 0 calc(500 - (5 * --value(integer))) 0 0;
+  background-image: linear-gradient(to bottom, #000 50%, #ffffff00 50%);
+  background-repeat: repeat-y;
+  background-position: right top, right bottom;
+  background-size: 0.1em --value([length]);
 }
