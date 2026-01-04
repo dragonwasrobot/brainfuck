@@ -1,18 +1,26 @@
 module Main exposing (main)
 
+import Array
+import Brainfuck.ASCII as ASCII exposing (ASCII, Byte)
 import Brainfuck.Evaluator as Evaluator exposing (EvaluationContext, State(..))
 import Brainfuck.Parser as Parser
 import Brainfuck.VirtualMachine as VirtualMachine exposing (VirtualMachine)
 import Browser
+import Char
+import Hex
 import Html exposing (Html)
 import Html.Attributes as Attr
 import Html.Events as Events
 import Http exposing (Response(..))
 import List
 import List.Extra as List
+import Maybe.Extra as Maybe
 import Process
+import Result
+import Result.Extra as Result
 import String
-import Task exposing (Task)
+import String.Extra as String
+import Task
 
 
 
@@ -43,7 +51,8 @@ init flags =
         initModel =
             { isProd = flags.isProd
             , inputCode = ""
-            , inputData = ""
+            , inputMode = TextMode
+            , inputData = []
             , form = Initial
             , page = InterpreterPage
             }
@@ -63,10 +72,16 @@ type alias Code =
 type alias Model =
     { isProd : Bool
     , inputCode : Code
-    , inputData : String
+    , inputMode : InputMode
+    , inputData : List Byte
     , form : FormState
     , page : Page
     }
+
+
+type InputMode
+    = ByteMode String
+    | TextMode
 
 
 type FormState
@@ -79,10 +94,11 @@ type Page
     = ReferenceManualPage
     | InterpreterPage
     | SourceArchivesPage
+    | CharacterSetsPage
 
 
 
--- ** Msg
+-- ** Update
 
 
 type Msg
@@ -90,16 +106,13 @@ type Msg
     | StopEvaluation
     | ResumeEvaluation
     | EvaluateStep
-    | ClearOutput
+    | ChangeMode
+    | ResetState
     | SetCode Code
     | SetInput String
     | ChangePage Page
     | SelectSourceFile ArchiveEntry
     | SourceFileDownloaded (Result Http.Error String)
-
-
-
--- ** Update
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -117,8 +130,11 @@ update msg model =
         EvaluateStep ->
             evaluateStep model
 
-        ClearOutput ->
-            clearOutput model
+        ChangeMode ->
+            changeMode model
+
+        ResetState ->
+            resetState model
 
         SetCode code ->
             setCode code model
@@ -239,35 +255,28 @@ stepCmd =
     Task.perform (\_ -> EvaluateStep) (Process.sleep 1)
 
 
-clearOutput : Model -> ( Model, Cmd Msg )
-clearOutput model =
-    case model.form of
-        Initial ->
-            -- Nothing to clear
-            ( model, Cmd.none )
+changeMode : Model -> ( Model, Cmd Msg )
+changeMode model =
+    case model.inputMode of
+        TextMode ->
+            ( { model | inputMode = ByteMode "", inputData = [] }, Cmd.none )
 
-        Failed _ ->
-            -- Nothing to clear
-            ( model, Cmd.none )
-
-        Loaded context ->
-            let
-                newContext =
-                    { context | vm = resetVirtualMachine model.inputData }
-            in
-            ( { model | form = Loaded newContext }, Cmd.none )
+        ByteMode _ ->
+            ( { model | inputMode = TextMode, inputData = [] }, Cmd.none )
 
 
-resetVirtualMachine : String -> VirtualMachine
+resetState : Model -> ( Model, Cmd Msg )
+resetState model =
+    ( { model | form = Initial }, Cmd.none )
+
+
+resetVirtualMachine : List Byte -> VirtualMachine
 resetVirtualMachine data =
     let
         eofByte =
             0
-
-        inputs =
-            data |> String.toList |> List.map Char.toCode
     in
-    VirtualMachine.init <| inputs ++ [ eofByte ]
+    VirtualMachine.init <| data ++ [ eofByte ]
 
 
 setCode : Code -> Model -> ( Model, Cmd Msg )
@@ -277,7 +286,69 @@ setCode code model =
 
 setInput : String -> Model -> ( Model, Cmd Msg )
 setInput input model =
-    ( { model | inputData = input }, Cmd.none )
+    let
+        isOddLength : String -> Bool
+        isOddLength str =
+            modBy 2 (String.length str) == 1
+
+        isValidChar : String -> Bool
+        isValidChar str =
+            str
+                |> String.toList
+                |> List.head
+                |> Maybe.unwrap False Char.isHexDigit
+
+        toByte : String -> Maybe Int
+        toByte =
+            String.toLower >> Hex.fromString >> Result.toMaybe
+
+        trimHexPrefix : String -> String
+        trimHexPrefix str =
+            str
+                |> String.replace "0x" ""
+                |> String.replace " " ""
+
+        numberString =
+            trimHexPrefix input
+
+        newInputData =
+            case model.inputMode of
+                TextMode ->
+                    input
+                        |> String.toList
+                        |> List.map Char.toCode
+
+                ByteMode _ ->
+                    if isOddLength numberString then
+                        numberString
+                            |> String.dropRight 1
+                            |> String.break 2
+                            |> List.map toByte
+                            |> Maybe.values
+
+                    else
+                        numberString
+                            |> String.break 2
+                            |> List.map toByte
+                            |> Maybe.values
+
+        newInputMode =
+            case model.inputMode of
+                TextMode ->
+                    TextMode
+
+                ByteMode _ ->
+                    let
+                        lastChar =
+                            String.right 1 numberString
+                    in
+                    if isOddLength numberString && isValidChar lastChar then
+                        ByteMode lastChar
+
+                    else
+                        ByteMode ""
+    in
+    ( { model | inputData = newInputData, inputMode = newInputMode }, Cmd.none )
 
 
 setPage : Page -> Model -> ( Model, Cmd Msg )
@@ -374,7 +445,7 @@ viewNavigation model =
                     ]
                 , Events.onClick (ChangePage InterpreterPage)
                 ]
-                [ Html.i [ Attr.class "fa-solid fa-tape mr-2" ] []
+                [ Html.i [ Attr.class "fa-solid fa-play mr-2" ] []
                 , Html.text "BF-4000 MACHINE"
                 ]
             , Html.button
@@ -387,8 +458,21 @@ viewNavigation model =
                     ]
                 , Events.onClick (ChangePage SourceArchivesPage)
                 ]
-                [ Html.i [ Attr.class "mr-2 fa-solid fa-box-archive" ] []
+                [ Html.i [ Attr.class "mr-2 fa-solid fa-folder-open" ] []
                 , Html.text "SOURCE ARCHIVES"
+                ]
+            , Html.button
+                [ Attr.id "show-character-sets"
+                , Attr.type_ "submit"
+                , Attr.class buttonStyling
+                , Attr.classList
+                    [ ( disabledStyling, model.page == CharacterSetsPage )
+                    , ( enabledStyling, model.page /= CharacterSetsPage )
+                    ]
+                , Events.onClick (ChangePage CharacterSetsPage)
+                ]
+                [ Html.i [ Attr.class "mr-2 fa-solid fa-paragraph" ] []
+                , Html.text "CHARACTER SETS"
                 ]
             ]
         ]
@@ -407,6 +491,9 @@ viewBody model =
 
                 SourceArchivesPage ->
                     viewSourceArchives model
+
+                CharacterSetsPage ->
+                    viewCharacterSets model
     in
     Html.div
         [ Attr.id "paper-container"
@@ -634,6 +721,10 @@ viewReferenceManual =
         ]
 
 
+
+-- *** Source Archive
+
+
 type alias ArchiveEntry =
     { id : String
     , title : String
@@ -736,6 +827,77 @@ viewSourceArchives model =
         ]
 
 
+
+-- *** Character Sets
+
+
+viewCharacterSets : Model -> Html Msg
+viewCharacterSets model =
+    let
+        viewRow : ASCII -> Html Msg
+        viewRow ascii =
+            Html.tr [ Attr.classList [ ( "bg-gray-100", modBy 2 ascii.dec == 1 ) ] ]
+                [ Html.td [ Attr.class "py-1" ] [ Html.text <| String.fromInt ascii.dec ]
+                , Html.td [ Attr.class "py-1" ] [ Html.text <| "0x" ++ ascii.hex ]
+                , Html.td [ Attr.class "py-1 text-red-700" ] [ Html.text <| ascii.char ]
+                , Html.td [ Attr.class "py-1 text-left" ] [ Html.text <| Maybe.withDefault "" ascii.description ]
+                ]
+    in
+    Html.div
+        [ Attr.id "body"
+        , Attr.class "flex flex-col w-10/11 bg-white mx-5 mt-4 tracking-wider"
+        ]
+        [ Html.div
+            [ Attr.id "header-section"
+            , Attr.class "w-full flex flex-row justify-between text-sm font-medium"
+            ]
+            [ Html.div [ Attr.class "text-left" ]
+                [ Html.text "DRAGON & ROBOT"
+                , Html.br [] []
+                , Html.text "BUSINESS MACHINES INC."
+                ]
+            , Html.div [ Attr.class "text-right" ]
+                [ Html.text "APPENDIX A.2"
+                , Html.br [] []
+                , Html.text "SEP 1968"
+                ]
+            ]
+        , Html.div
+            [ Attr.id "character-set-section"
+            , Attr.class "mt-4 min-h-164"
+            ]
+            [ Html.div
+                [ Attr.id "subheader"
+                , Attr.class "text-left font-semibold"
+                ]
+                [ Html.span [ Attr.class "mt-2" ] [ Html.text "CHARACTER SETS" ]
+                ]
+            , Html.hr [ Attr.class "mt-2" ] []
+            , Html.table [ Attr.id "ascii-table", Attr.class "w-full table-auto" ]
+                [ Html.thead [ Attr.class "font-semibold text-center" ]
+                    [ Html.tr []
+                        [ Html.th [ Attr.class "py-2 border-t-0 border-l-0 border-b" ] [ Html.text "DEC" ]
+                        , Html.th [ Attr.class "py-2 border-t-0 border-l-0 border-b" ] [ Html.text "HEX" ]
+                        , Html.th [ Attr.class "py-2 border-t-0 border-l-0 border-b" ] [ Html.text "CHAR" ]
+                        , Html.th [ Attr.class "py-2 border-t-0 border-l-0 border-b text-left" ] [ Html.text "NAME" ]
+                        ]
+                    ]
+                , Html.tbody [ Attr.class "text-center" ]
+                    (ASCII.table
+                        |> Array.toList
+                        |> List.map viewRow
+                    )
+                ]
+            ]
+        , Html.hr [ Attr.class "mt-4" ] []
+        , viewFooter 374
+        ]
+
+
+
+-- *** BF-4000 Machine
+
+
 viewInterpreter : Model -> Html Msg
 viewInterpreter model =
     Html.div
@@ -808,20 +970,86 @@ viewInterpreterForm model =
                 ]
 
         viewInput =
-            Html.div
-                [ Attr.id "input-field"
-                , Attr.class "mt-2 flex flex-row"
-                ]
-                [ Html.span [ Attr.class "w-1/6" ] [ Html.text "INPUT" ]
-                , Html.textarea
-                    [ Attr.id "code-input"
-                    , Attr.class "w-5/6 border-none outline-none resize-none"
-                    , Attr.rows 5
-                    , Attr.cols 60
-                    , Attr.placeholder "ENTER DATA"
-                    , Events.onInput SetInput
+            let
+                modeLabel =
+                    case model.inputMode of
+                        ByteMode _ ->
+                            "BYTE"
+
+                        TextMode ->
+                            "TEXT"
+
+                inputText =
+                    case model.inputMode of
+                        TextMode ->
+                            model.inputData
+                                |> List.map
+                                    (\byte ->
+                                        case ASCII.lookup byte of
+                                            Nothing ->
+                                                " 0x" ++ String.toUpper (Hex.toString byte) ++ " "
+
+                                            Just ascii ->
+                                                case ascii.char of
+                                                    "LF" ->
+                                                        "\n"
+
+                                                    "SPACE" ->
+                                                        " "
+
+                                                    char ->
+                                                        char
+                                    )
+                                |> String.join ""
+
+                        ByteMode newChar ->
+                            let
+                                hexString =
+                                    model.inputData
+                                        |> List.map (\byte -> "0x" ++ (String.toUpper <| Hex.toString <| byte))
+                                        |> String.join " "
+                            in
+                            if String.length newChar > 0 then
+                                hexString ++ (" 0x" ++ String.toUpper newChar)
+
+                            else
+                                hexString
+            in
+            Html.div []
+                [ Html.div
+                    [ Attr.id "response-type"
+                    , Attr.class "flex flex-row"
                     ]
-                    [ Html.text model.inputData ]
+                    [ Html.span [ Attr.class "w-1/6" ] [ Html.text "MODE" ]
+                    , Html.span [ Attr.class "w-5/6" ] [ Html.text modeLabel ]
+                    ]
+                , Html.div
+                    [ Attr.id "input-field"
+                    , Attr.class "mt-1 flex flex-row"
+                    ]
+                    [ Html.span [ Attr.class "w-1/6" ] [ Html.text "INPUT" ]
+                    , Html.textarea
+                        [ Attr.id "data-input"
+                        , Attr.class "w-5/6 border-none outline-none resize-none"
+                        , Attr.rows 5
+                        , Attr.cols 60
+                        , Attr.placeholder "ENTER DATA"
+                        , Attr.value <| String.trimLeft inputText
+                        , Events.onInput SetInput
+                        ]
+                        []
+                    ]
+                ]
+
+        viewModeButton =
+            Html.button
+                [ Attr.id "change-mode"
+                , Attr.type_ "submit"
+                , Attr.class "mt-4 p-2 bg-white border text-sm text-left cursor-pointer"
+                , Events.onClick ChangeMode
+                ]
+                [ Html.i [ Attr.class "fa-solid fa-terminal mr-2" ] []
+                , Html.text "CHANGE MODE"
                 ]
 
         viewRunButton =
@@ -859,48 +1087,40 @@ viewInterpreterForm model =
                 , Html.text label
                 ]
 
-        viewClearButton =
+        viewResetButton =
             Html.button
-                [ Attr.id "clear-program"
+                [ Attr.id "reset-program"
                 , Attr.type_ "submit"
                 , Attr.class "ml-4 mt-4 p-2 bg-white border text-sm text-left cursor-pointer"
-                , Events.onClick ClearOutput
+                , Events.onClick ResetState
                 ]
                 [ Html.i [ Attr.class "fa-solid fa-xmark mr-2" ] []
-                , Html.text "CLEAR"
+                , Html.text "RESET"
                 ]
 
         viewResult =
             let
-                chunkString str =
-                    str
-                        |> String.toList
-                        |> List.greedyGroupsOf 59
-                        |> List.intersperse [ '\n' ]
-                        |> List.concat
-                        |> String.fromList
-
                 stateToLabel state =
                     case state of
                         Running ->
-                            "Running"
+                            "RUNNING"
 
                         Paused ->
-                            "Paused"
+                            "PAUSED"
 
                         Finished ->
-                            "Finished"
+                            "FINISHED"
 
                         Crashed reason ->
-                            "Crash: " ++ reason
+                            "CRASH: " ++ reason
 
                 status =
                     case model.form of
                         Initial ->
-                            "Initial"
+                            "INITIAL"
 
                         Failed reason ->
-                            "Failed: " ++ reason
+                            "FAILED: " ++ reason
 
                         Loaded context ->
                             context.state |> stateToLabel
@@ -914,17 +1134,46 @@ viewInterpreterForm model =
                             ""
 
                         Loaded context ->
-                            context.vm.output
+                            let
+                                padHex hex =
+                                    if String.length hex == 1 then
+                                        "0" ++ hex
+
+                                    else
+                                        hex
+
+                                toPrintableChar byte =
+                                    case ASCII.lookup byte of
+                                        Nothing ->
+                                            "0x" ++ (byte |> Hex.toString |> String.toUpper |> padHex)
+
+                                        Just ascii ->
+                                            case ascii.char of
+                                                "LF" ->
+                                                    "\n"
+
+                                                "SPACE" ->
+                                                    " "
+
+                                                char ->
+                                                    char
+
+                                toPrintableHex byte =
+                                    "0x" ++ (byte |> Hex.toString |> String.toUpper |> padHex)
+                            in
+                            case model.inputMode of
+                                TextMode ->
+                                    context.vm.output
+                                        |> List.map toPrintableChar
+                                        |> String.join ""
+
+                                ByteMode _ ->
+                                    context.vm.output
+                                        |> List.map toPrintableHex
+                                        |> String.join " "
             in
             Html.div []
                 [ Html.div
-                    [ Attr.id "response-type"
-                    , Attr.class "flex flex-row"
-                    ]
-                    [ Html.span [ Attr.class "w-1/6" ] [ Html.text "RESPONSE" ]
-                    , Html.span [ Attr.class "w-5/6" ] [ Html.text "TEXT" ]
-                    ]
-                , Html.div
                     [ Attr.id "response-status"
                     , Attr.class "flex flex-row"
                     ]
@@ -933,12 +1182,12 @@ viewInterpreterForm model =
                     ]
                 , Html.div
                     [ Attr.id "response-body"
-                    , Attr.class "flex flex-row"
+                    , Attr.class "mt-1 flex flex-row"
                     ]
-                    [ Html.span [ Attr.class "w-1/6" ] [ Html.text "DATA" ]
+                    [ Html.span [ Attr.class "w-1/6" ] [ Html.text "OUTPUT" ]
                     , Html.pre
                         [ Attr.id "code-output"
-                        , Attr.class "w-5/6 border-none outline-none resize-none overflow-x-scroll"
+                        , Attr.class "w-5/6 border-none outline-none resize-none whitespace-normal"
                         ]
                         [ Html.text response ]
                     ]
@@ -946,10 +1195,10 @@ viewInterpreterForm model =
 
         viewDescription =
             Html.div [ Attr.id "function-description" ]
-                [ Html.text "Once the PROMPT text has been entered, hit CTRL plus ENTER to send the program from the terminal to the BF-4000 mainframe for execution. Once completed, the STATUS field will display the message SUCCESS along with the output of the program in the DATA field."
+                [ Html.text "Once the SOURCE text has been entered, hit CTRL plus ENTER to send the program from the terminal to the BF-4000 mainframe for execution. Once completed, the STATUS field will display the message SUCCESS along with the output of the program in the OUTPUT field."
                 , Html.br [] []
                 , Html.br [] []
-                , Html.text "If the STATUS field displays ERROR then the DATA field includes a description of the error encountered during execution."
+                , Html.text "If the STATUS field displays ERROR then the OUTPUT field includes a description of the error encountered during execution."
                 , Html.br [] []
                 , Html.br [] []
                 , Html.text "A reference to the BF-4000 machine language can be found on pages 138-149."
@@ -963,17 +1212,22 @@ viewInterpreterForm model =
         , Html.hr [ Attr.class "mt-1.5" ] []
         , Html.hr [ Attr.class "mt-0.25" ] []
         , viewSource
-        , Html.hr [ Attr.class "mt-2" ] []
+        , Html.hr [ Attr.class "my-2" ] []
         , viewInput
-        , viewRunButton
-        , viewClearButton
+        , viewModeButton
         , Html.hr [ Attr.class "my-2" ] []
         , viewResult
+        , viewRunButton
+        , viewResetButton
         , Html.hr [ Attr.class "my-2" ] []
         , viewDescription
         , Html.hr [ Attr.class "my-2" ] []
         , viewFooter 127
         ]
+
+
+
+-- *** Helpers
 
 
 viewFooter : Int -> Html msg
@@ -986,6 +1240,10 @@ viewFooter pageNumber =
         , Html.span [ Attr.class "font-semibold" ] [ Html.text "Tabulating the Future™" ]
         , Html.span [] [ Html.text <| "Page " ++ String.fromInt pageNumber ]
         ]
+
+
+
+-- ** Subscriptions
 
 
 subscriptions : Model -> Sub Msg

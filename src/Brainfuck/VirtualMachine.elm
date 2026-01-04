@@ -4,15 +4,15 @@ module Brainfuck.VirtualMachine exposing (Cells, Index, VirtualMachine, getCell,
 
 The machine model we are going to use for this interpreter is very simple:
 
-  - Our memory consists of 100 cells (the original version uses 30000).
+  - Our memory consists of 30,000 cells.
 
   - There's a data pointer which points to a specific cell and is initialized at
     the leftmost cell, an error will be reported if the pointer runs off the
     tape at either end.
     pointer = 0
 
-  - A data cell is 8 bits, and an error will be reported if the program tries
-    to perform under- or overflow, i.e. decrement 0 or increment 255.
+  - A data cell is 8 bits (1 byte), and an error will be reported if the program
+    tries to perform under- or overflow, i.e. decrement 0 or increment 255.
 
   - Two streams of bytes for input and output using the ASCII character
     encoding.
@@ -20,6 +20,7 @@ The machine model we are going to use for this interpreter is very simple:
 -}
 
 import Array exposing (Array)
+import Brainfuck.ASCII exposing (Byte)
 
 
 type alias Index =
@@ -29,22 +30,22 @@ type alias Index =
 type alias VirtualMachine =
     { pointer : Index
     , cells : Cells
-    , output : String
-    , input : List Int
+    , output : List Byte
+    , input : List Byte
     }
 
 
-init : List Int -> VirtualMachine
+init : List Byte -> VirtualMachine
 init input =
     { pointer = 0
     , cells = initCells
-    , output = ""
+    , output = []
     , input = input
     }
 
 
 type alias Cells =
-    Array (Array Int)
+    Array (Array Byte)
 
 
 rows : Int
@@ -63,7 +64,7 @@ initCells =
     Array.initialize rows (\_ -> Array.initialize columns (\_ -> 0))
 
 
-getCell : Index -> VirtualMachine -> Maybe Int
+getCell : Index -> VirtualMachine -> Maybe Byte
 getCell pointer vm =
     let
         oldCells =
@@ -86,7 +87,7 @@ getCell pointer vm =
             Array.get columnIdx row
 
 
-setCell : Index -> Int -> VirtualMachine -> VirtualMachine
+setCell : Index -> Byte -> VirtualMachine -> VirtualMachine
 setCell pointer value vm =
     let
         oldCells =

@@ -12,7 +12,7 @@ module Brainfuck.Evaluator exposing
     , previousSiblingExp
     )
 
-import Brainfuck.Ascii as Ascii
+import Brainfuck.ASCII as ASCII exposing (ASCII, Byte)
 import Brainfuck.Parser exposing (Command(..), Expression(..))
 import Brainfuck.VirtualMachine as VirtualMachine exposing (VirtualMachine)
 import List
@@ -414,22 +414,13 @@ handleOutputByte vm =
     outputByte cellValue vm
 
 
-outputByte : Int -> VirtualMachine -> Result String VirtualMachine
+outputByte : Byte -> VirtualMachine -> Result String VirtualMachine
 outputByte cellValue vm =
-    case Ascii.toChar cellValue of
-        Just char ->
-            let
-                newOutput =
-                    vm.output ++ String.fromChar char
-            in
-            Ok { vm | output = newOutput }
-
-        Nothing ->
-            let
-                newOutput =
-                    vm.output ++ "0x" ++ String.fromInt cellValue
-            in
-            Ok { vm | output = newOutput }
+    let
+        newOutput =
+            vm.output ++ [ cellValue ]
+    in
+    Ok { vm | output = newOutput }
 
 
 handleInputByte : VirtualMachine -> Result String VirtualMachine
