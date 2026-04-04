@@ -284,6 +284,11 @@ setCode code model =
     ( { model | inputCode = code }, Cmd.none )
 
 
+padHex : String -> String
+padHex =
+    String.padLeft 2 '0'
+
+
 setInput : String -> Model -> ( Model, Cmd Msg )
 setInput input model =
     let
@@ -1002,7 +1007,7 @@ viewInterpreterForm model =
                             let
                                 hexString =
                                     model.inputData
-                                        |> List.map (\byte -> "0x" ++ (String.toUpper <| Hex.toString <| byte))
+                                        |> List.map (\byte -> "0x" ++ (padHex <| String.toUpper <| Hex.toString <| byte))
                                         |> String.join " "
                             in
                             if String.length newChar > 0 then
@@ -1131,13 +1136,6 @@ viewInterpreterForm model =
 
                         Loaded context ->
                             let
-                                padHex hex =
-                                    if String.length hex == 1 then
-                                        "0" ++ hex
-
-                                    else
-                                        hex
-
                                 toPrintableChar byte =
                                     case ASCII.lookup byte of
                                         Nothing ->
