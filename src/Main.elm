@@ -38,7 +38,7 @@ main =
 
 
 type alias Flags =
-    { isProd : Bool }
+    { basePath : String }
 
 
 
@@ -49,7 +49,7 @@ init : Flags -> ( Model, Cmd Msg )
 init flags =
     let
         initModel =
-            { isProd = flags.isProd
+            { basePath = flags.basePath
             , inputCode = ""
             , inputMode = TextMode
             , inputData = []
@@ -70,7 +70,7 @@ type alias Code =
 
 
 type alias Model =
-    { isProd : Bool
+    { basePath : String
     , inputCode : Code
     , inputMode : InputMode
     , inputData : List Byte
@@ -360,11 +360,7 @@ selectSourceFile : ArchiveEntry -> Model -> ( Model, Cmd Msg )
 selectSourceFile archiveEntry model =
     let
         prefixPath =
-            if model.isProd then
-                "/brainfuck/bf-programs/"
-
-            else
-                "/bf-programs/"
+            model.basePath ++ "/bf-programs/"
 
         filename =
             archiveEntry.id ++ "-" ++ String.toLower archiveEntry.title ++ ".bf"
