@@ -1,4 +1,11 @@
-module Brainfuck.VirtualMachine exposing (Cells, Index, VirtualMachine, getCell, init, setCell)
+module Brainfuck.VirtualMachine exposing
+    ( Cells
+    , Index
+    , VirtualMachine
+    , getCell
+    , init
+    , setCell
+    )
 
 {-| Machine Model
 

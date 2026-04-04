@@ -25,11 +25,12 @@ referenceAst =
 
 suite : Test
 suite =
-    describe "Evaluator"
-        [ describe "Zipper"
-            [ test "Can move down to first child expression in block" <|
+    let
+        shouldMoveDownToFirstChild =
+            test "should move down to first child expression in block" <|
                 \_ ->
                     let
+                        -- Given
                         inputExp =
                             ExpRoot
                                 [ ExpCommand DecrementPointer
@@ -42,9 +43,11 @@ suite =
                             , breadcrumbs = []
                             }
 
+                        -- When
                         outputZipper =
                             Evaluator.childExp inputZipper
 
+                        -- Then
                         expectedZipper =
                             Just
                                 { expression = ExpCommand DecrementPointer
@@ -58,90 +61,80 @@ suite =
                                 }
                     in
                     Expect.equal expectedZipper outputZipper
-            ]
-        , test "Can move up to parent expression in block" <|
-            \_ ->
-                let
-                    inputZipper =
-                        { expression = ExpCommand IncrementByte
-                        , breadcrumbs =
-                            [ ExpCrumb True
-                                [ ExpCommand IncrementByte
-                                , ExpCommand DecrementPointer
-                                ]
-                                []
-                            ]
-                        }
 
-                    outputZipper =
-                        Evaluator.parentExp inputZipper
-
-                    expectedZipper =
-                        Just
-                            { expression =
-                                ExpRoot
-                                    [ ExpCommand DecrementPointer
-                                    , ExpCommand IncrementByte
-                                    , ExpCommand IncrementByte
-                                    ]
-                            , breadcrumbs = []
-                            }
-                in
-                Expect.equal expectedZipper outputZipper
-        , test "Can move to next sibling expression in block" <|
-            \_ ->
-                let
-                    inputZipper =
-                        { expression = ExpCommand DecrementPointer
-                        , breadcrumbs =
-                            [ ExpCrumb False
-                                []
-                                [ ExpCommand IncrementByte
-                                , ExpCommand IncrementByte
-                                ]
-                            ]
-                        }
-
-                    outputZipper =
-                        Evaluator.nextSiblingExp inputZipper
-
-                    expectedZipper =
-                        Just
+        shouldMoveUpToParent =
+            test "should move up to parent expression in block" <|
+                \_ ->
+                    let
+                        -- Given
+                        inputZipper =
                             { expression = ExpCommand IncrementByte
                             , breadcrumbs =
-                                [ ExpCrumb False
-                                    [ ExpCommand DecrementPointer ]
-                                    [ ExpCommand IncrementByte ]
+                                [ ExpCrumb True
+                                    [ ExpCommand IncrementByte
+                                    , ExpCommand DecrementPointer
+                                    ]
+                                    []
                                 ]
                             }
-                in
-                Expect.equal expectedZipper outputZipper
-        , test "Moving right and left gives returns original zipper" <|
-            \_ ->
-                let
-                    inputZipper =
-                        { expression = ExpCommand DecrementPointer
-                        , breadcrumbs =
-                            [ ExpCrumb False
-                                []
-                                [ ExpCommand IncrementByte
-                                , ExpCommand IncrementByte
+
+                        -- When
+                        outputZipper =
+                            Evaluator.parentExp inputZipper
+
+                        -- Then
+                        expectedZipper =
+                            Just
+                                { expression =
+                                    ExpRoot
+                                        [ ExpCommand DecrementPointer
+                                        , ExpCommand IncrementByte
+                                        , ExpCommand IncrementByte
+                                        ]
+                                , breadcrumbs = []
+                                }
+                    in
+                    Expect.equal expectedZipper outputZipper
+
+        shouldMoveToNextSibling =
+            test "should move to next sibling expression in block" <|
+                \_ ->
+                    let
+                        -- Given
+                        inputZipper =
+                            { expression = ExpCommand DecrementPointer
+                            , breadcrumbs =
+                                [ ExpCrumb False
+                                    []
+                                    [ ExpCommand IncrementByte
+                                    , ExpCommand IncrementByte
+                                    ]
                                 ]
-                            , ExpCrumb True
-                                [ ExpCommand IncrementByte ]
-                                []
-                            ]
-                        }
+                            }
 
-                    outputZipper =
-                        inputZipper
-                            |> Evaluator.nextSiblingExp
-                            |> Maybe.andThen Evaluator.nextSiblingExp
-                            |> Maybe.andThen Evaluator.parentExp
-                            |> Maybe.andThen Evaluator.childExp
+                        -- When
+                        outputZipper =
+                            Evaluator.nextSiblingExp inputZipper
 
-                    expectedZipper =
-                        Just
+                        -- Then
+                        expectedZipper =
+                            Just
+                                { expression = ExpCommand IncrementByte
+                                , breadcrumbs =
+                                    [ ExpCrumb False
+                                        [ ExpCommand DecrementPointer ]
+                                        [ ExpCommand IncrementByte ]
+                                    ]
+                                }
+                    in
+                    Expect.equal expectedZipper outputZipper
+
+        shouldMoveBackToOriginal =
+            test "should move back to original when going right then left" <|
+                \_ ->
+                    let
+                        -- Given
+                        inputZipper =
                             { expression = ExpCommand DecrementPointer
                             , breadcrumbs =
                                 [ ExpCrumb False
@@ -154,50 +147,94 @@ suite =
                                     []
                                 ]
                             }
-                in
-                Expect.equal expectedZipper outputZipper
-        , test "Can move to previous sibling expression in block" <|
-            \_ ->
-                let
-                    inputZipper =
-                        { expression = ExpCommand IncrementByte
-                        , breadcrumbs =
-                            [ ExpCrumb False
-                                [ ExpCommand DecrementPointer ]
-                                [ ExpCommand IncrementByte
-                                ]
-                            ]
-                        }
 
-                    outputZipper =
-                        Evaluator.previousSiblingExp inputZipper
+                        -- When
+                        outputZipper =
+                            inputZipper
+                                |> Evaluator.nextSiblingExp
+                                |> Maybe.andThen Evaluator.nextSiblingExp
+                                |> Maybe.andThen Evaluator.parentExp
+                                |> Maybe.andThen Evaluator.childExp
 
-                    expectedZipper =
-                        Just
-                            { expression = ExpCommand DecrementPointer
+                        -- Then
+                        expectedZipper =
+                            Just
+                                { expression = ExpCommand DecrementPointer
+                                , breadcrumbs =
+                                    [ ExpCrumb False
+                                        []
+                                        [ ExpCommand IncrementByte
+                                        , ExpCommand IncrementByte
+                                        ]
+                                    , ExpCrumb True
+                                        [ ExpCommand IncrementByte ]
+                                        []
+                                    ]
+                                }
+                    in
+                    Expect.equal expectedZipper outputZipper
+
+        shouldMoveToPreviousSibling =
+            test "should move to previous sibling expression in block" <|
+                \_ ->
+                    let
+                        -- Given
+                        inputZipper =
+                            { expression = ExpCommand IncrementByte
                             , breadcrumbs =
                                 [ ExpCrumb False
-                                    []
+                                    [ ExpCommand DecrementPointer ]
                                     [ ExpCommand IncrementByte
-                                    , ExpCommand IncrementByte
                                     ]
                                 ]
                             }
-                in
-                Expect.equal expectedZipper outputZipper
-        , test "Can't move to a parent expression of root" <|
-            \_ ->
-                let
-                    inputZipper =
-                        { expression = ExpRoot [ ExpCommand DecrementPointer ]
-                        , breadcrumbs = []
-                        }
 
-                    outputZipper =
-                        Evaluator.parentExp inputZipper
+                        -- When
+                        outputZipper =
+                            Evaluator.previousSiblingExp inputZipper
 
-                    expectedZipper =
-                        Nothing
-                in
-                Expect.equal expectedZipper outputZipper
+                        -- Then
+                        expectedZipper =
+                            Just
+                                { expression = ExpCommand DecrementPointer
+                                , breadcrumbs =
+                                    [ ExpCrumb False
+                                        []
+                                        [ ExpCommand IncrementByte
+                                        , ExpCommand IncrementByte
+                                        ]
+                                    ]
+                                }
+                    in
+                    Expect.equal expectedZipper outputZipper
+
+        shouldNotMoveBeyondRoot =
+            test "should not move further up than root" <|
+                \_ ->
+                    let
+                        -- Given
+                        inputZipper =
+                            { expression = ExpRoot [ ExpCommand DecrementPointer ]
+                            , breadcrumbs = []
+                            }
+
+                        -- When
+                        outputZipper =
+                            Evaluator.parentExp inputZipper
+
+                        -- Then
+                        expectedZipper =
+                            Nothing
+                    in
+                    Expect.equal expectedZipper outputZipper
+    in
+    describe "Evaluator: "
+        [ describe "Zipper"
+            [ shouldMoveDownToFirstChild
+            , shouldMoveUpToParent
+            , shouldMoveToNextSibling
+            , shouldMoveBackToOriginal
+            , shouldMoveToPreviousSibling
+            , shouldNotMoveBeyondRoot
+            ]
         ]
