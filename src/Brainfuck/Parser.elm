@@ -4,7 +4,7 @@ module Brainfuck.Parser exposing
     , parse
     )
 
-import Parser as P exposing ((|.), (|=), Parser, Step(..))
+import Parser as P exposing ((|.), (|=), DeadEnd, Parser, Problem(..), Step(..))
 
 
 {-| The `parse` function takes a Brainfuck source program as a `String` and
@@ -33,7 +33,7 @@ Semantics:
   - ']' -- jump back to the matching `[` unless the byte at data pointer is zero
 
 -}
-parse : String -> Result (List P.DeadEnd) Expression
+parse : String -> Result String Expression
 parse source =
     let
         cleanedSource =
@@ -41,7 +41,72 @@ parse source =
             source
                 |> String.filter (\c -> List.member c [ '[', ']', '+', '-', '>', '<', ',', '.' ])
     in
-    P.run pProgram cleanedSource
+    cleanedSource
+        |> P.run pProgram
+        |> Result.mapError deadEndsToString
+
+
+{-| Pretty prints a `List DeadEnd` error result from parsing Brainfuck source code.
+-}
+deadEndsToString : List DeadEnd -> String
+deadEndsToString deadEnds =
+    let
+        deadEndToString : DeadEnd -> String
+        deadEndToString deadEnd =
+            let
+                position : String
+                position =
+                    "row:"
+                        ++ String.fromInt deadEnd.row
+                        ++ " and "
+                        ++ "col:"
+                        ++ String.fromInt deadEnd.col
+                        ++ "\n"
+            in
+            case deadEnd.problem of
+                Expecting string ->
+                    "Expecting '" ++ string ++ "' at " ++ position
+
+                ExpectingInt ->
+                    "Expecting int at " ++ position
+
+                ExpectingHex ->
+                    "Expecting hex at " ++ position
+
+                ExpectingOctal ->
+                    "Expecting octal at " ++ position
+
+                ExpectingBinary ->
+                    "Expecting binary at " ++ position
+
+                ExpectingFloat ->
+                    "Expecting float at " ++ position
+
+                ExpectingNumber ->
+                    "Expecting number at " ++ position
+
+                ExpectingVariable ->
+                    "Expecting variable at " ++ position
+
+                ExpectingSymbol symbol ->
+                    "Expecting symbol '" ++ symbol ++ "' at " ++ position
+
+                ExpectingKeyword keyword ->
+                    "Expecting keyword '" ++ keyword ++ "' at " ++ position
+
+                ExpectingEnd ->
+                    "Expecting end at " ++ position
+
+                UnexpectedChar ->
+                    "Unexpected char at " ++ position
+
+                Problem string ->
+                    "Problem string '" ++ string ++ "' at " ++ position
+
+                BadRepeat ->
+                    "Bad repeat at " ++ position
+    in
+    List.foldl (++) "" (List.map deadEndToString deadEnds)
 
 
 type Expression
@@ -61,7 +126,9 @@ type Command
 
 pProgram : Parser Expression
 pProgram =
-    P.map ExpRoot (many pExpression)
+    P.succeed ExpRoot
+        |= many pExpression
+        |. P.end
 
 
 pExpression : Parser Expression
