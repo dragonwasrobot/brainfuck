@@ -12,12 +12,16 @@
     "compile": "elm make --debug --output=docs/elm.min.js src/Main.elm",
     "serve": "cd docs && python3 -m http.server",
     "format": "npx elm-format --validate src",
-    "test": "npx elm-test tests"
+    "test": "npx elm-test tests",
+    "prepare": "husky"
   },
   "devDependencies": {
-    "elm-test": "^0.19.1-revision17",
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
     "@fortawesome/fontawesome-free": "^7.2.0",
     "@tailwindcss/cli": "^4.2.2",
+    "elm-test": "^0.19.1-revision17",
+    "husky": "^9.1.7",
     "tailwindcss": "^4.2.2"
   }
 }
