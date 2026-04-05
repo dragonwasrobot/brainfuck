@@ -2,6 +2,7 @@ module View.Interpreter exposing (Model, Msg, init, update, view)
 
 import Brainfuck.ASCII as ASCII exposing (ASCII, Byte)
 import Brainfuck.Evaluator as Evaluator exposing (EvaluationContext, State(..))
+import Brainfuck.Optimizer as Optimizer
 import Brainfuck.Parser as Parser
 import Brainfuck.VirtualMachine as VirtualMachine exposing (VirtualMachine)
 import Char
@@ -106,6 +107,8 @@ startEvaluation model =
         parsedProgram =
             model.inputCode
                 |> Parser.parse
+                -- TODO: Check if optimization is enabled
+                |> Result.map Optimizer.optimize
     in
     case parsedProgram of
         Err _ ->
@@ -563,8 +566,9 @@ viewInterpreterForm model =
                     , Attr.class "mt-1 flex flex-row"
                     ]
                     [ Html.span [ Attr.class "w-1/6" ] [ Html.text "OUTPUT" ]
-                    , Html.pre
+                    , Html.textarea
                         [ Attr.id "code-output"
+                        , Attr.disabled True
                         , Attr.class "w-5/6 border-none outline-none resize-none whitespace-normal"
                         ]
                         [ Html.text response ]

@@ -13,7 +13,7 @@ module Brainfuck.Evaluator exposing
     )
 
 import Brainfuck.ASCII as ASCII exposing (ASCII, Byte)
-import Brainfuck.Parser exposing (Command(..), Expression(..))
+import Brainfuck.AbstractSyntaxTree exposing (Command(..), Expression(..))
 import Brainfuck.VirtualMachine as VirtualMachine exposing (VirtualMachine)
 import List
 import List.Extra as List exposing (Step(..))
@@ -21,7 +21,7 @@ import Maybe.Extra as Maybe
 
 
 
--- ** Types
+-- ** TYPES
 
 
 type alias EvaluationContext =
@@ -188,7 +188,7 @@ nextExp zipper =
 
 
 
--- ** Functions
+-- ** FUNCTIONS
 
 
 isRunning : EvaluationContext -> Bool
@@ -284,22 +284,35 @@ evaluateCommand command context =
         evalCommand vm =
             case command of
                 IncrementPointer ->
-                    handleIncrementPointer vm
+                    handleAddToPointer 1 vm
 
                 DecrementPointer ->
-                    handleDecrementPointer vm
+                    handleRemoveFromPointer 1 vm
 
                 IncrementByte ->
-                    handleIncrementByte vm
+                    handleAddToByte 1 vm
 
                 DecrementByte ->
-                    handleDecrementByte vm
+                    handleRemoveFromByte 1 vm
 
                 OutputByte ->
                     handleOutputByte vm
 
                 InputByte ->
                     handleInputByte vm
+
+                -- Optimizer-produced
+                AddToPointer count ->
+                    handleAddToPointer count vm
+
+                RemoveFromPointer count ->
+                    handleRemoveFromPointer count vm
+
+                AddToByte count ->
+                    handleAddToByte count vm
+
+                RemoveFromByte count ->
+                    handleRemoveFromByte count vm
     in
     case evalCommand context.vm of
         Err reason ->
@@ -312,92 +325,6 @@ evaluateCommand command context =
 
                 Just newZipper ->
                     { context | vm = newVm, zipper = newZipper }
-
-
-handleIncrementPointer : VirtualMachine -> Result String VirtualMachine
-handleIncrementPointer vm =
-    let
-        tapeSize =
-            30000
-
-        newPointer =
-            vm.pointer + 1
-
-        newVm =
-            { vm | pointer = newPointer }
-    in
-    if newPointer >= tapeSize then
-        Err "Pointer ran off tape (right)"
-
-    else
-        Ok newVm
-
-
-handleDecrementPointer : VirtualMachine -> Result String VirtualMachine
-handleDecrementPointer vm =
-    let
-        newPointer =
-            vm.pointer - 1
-
-        newVm =
-            { vm | pointer = newPointer }
-    in
-    if newPointer < 0 then
-        Err "Pointer ran off tape (left)"
-
-    else
-        Ok newVm
-
-
-handleIncrementByte : VirtualMachine -> Result String VirtualMachine
-handleIncrementByte vm =
-    let
-        cellSize =
-            255
-
-        pointer =
-            vm.pointer
-
-        oldCellValue =
-            vm
-                |> VirtualMachine.getCell pointer
-                |> Maybe.withDefault 0
-
-        newCellValue =
-            oldCellValue + 1
-
-        newVm =
-            VirtualMachine.setCell pointer newCellValue vm
-    in
-    if newCellValue > cellSize then
-        Err "Integer overflow"
-
-    else
-        Ok newVm
-
-
-handleDecrementByte : VirtualMachine -> Result String VirtualMachine
-handleDecrementByte vm =
-    let
-        pointer =
-            vm.pointer
-
-        oldCellValue =
-            vm
-                |> VirtualMachine.getCell pointer
-                |> Maybe.withDefault 0
-
-        newCellValue =
-            oldCellValue - 1
-
-        newVm =
-            vm |> VirtualMachine.setCell pointer newCellValue
-    in
-    if newCellValue < 0 then
-        Err "Integer underflow"
-
-    else
-        Ok newVm
 
 
 handleOutputByte : VirtualMachine -> Result String VirtualMachine
@@ -439,3 +366,77 @@ handleInputByte vm =
                     vm |> VirtualMachine.setCell vm.pointer byte
             in
             Ok { newVm | input = newInput }
+
+
+handleAddToPointer : Int -> VirtualMachine -> Result String VirtualMachine
+handleAddToPointer count vm =
+    let
+        tapeSize =
+            30000
+
+        newPointer =
+            vm.pointer + count
+    in
+    if newPointer >= tapeSize then
+        Err "Pointer ran off tape (right)"
+
+    else
+        Ok { vm | pointer = newPointer }
+
+
+handleRemoveFromPointer : Int -> VirtualMachine -> Result String VirtualMachine
+handleRemoveFromPointer count vm =
+    let
+        newPointer =
+            vm.pointer - count
+    in
+    if newPointer < 0 then
+        Err "Pointer ran off tape (left)"
+
+    else
+        Ok { vm | pointer = newPointer }
+
+
+handleAddToByte : Int -> VirtualMachine -> Result String VirtualMachine
+handleAddToByte count vm =
+    let
+        cellSize =
+            255
+
+        pointer =
+            vm.pointer
+
+        oldCellValue =
+            vm
+                |> VirtualMachine.getCell pointer
+                |> Maybe.withDefault 0
+
+        newCellValue =
+            oldCellValue + count
+    in
+    if newCellValue > cellSize then
+        Err "Integer overflow"
+
+    else
+        Ok (VirtualMachine.setCell pointer newCellValue vm)
+
+
+handleRemoveFromByte : Int -> VirtualMachine -> Result String VirtualMachine
+handleRemoveFromByte count vm =
+    let
+        pointer =
+            vm.pointer
+
+        oldCellValue =
+            vm
+                |> VirtualMachine.getCell pointer
+                |> Maybe.withDefault 0
+
+        newCellValue =
+            oldCellValue - count
+    in
+    if newCellValue < 0 then
+        Err "Integer underflow"
+
+    else
+        Ok (VirtualMachine.setCell pointer newCellValue vm)

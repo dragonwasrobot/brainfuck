@@ -1,7 +1,7 @@
 module EvaluatorTests exposing (..)
 
+import Brainfuck.AbstractSyntaxTree exposing (Command(..), Expression(..))
 import Brainfuck.Evaluator as Evaluator exposing (ExpCrumb(..), ExpZipper)
-import Brainfuck.Parser exposing (Command(..), Expression(..))
 import Expect exposing (Expectation)
 import Test exposing (..)
 

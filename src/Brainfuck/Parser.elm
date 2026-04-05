@@ -1,9 +1,6 @@
-module Brainfuck.Parser exposing
-    ( Command(..)
-    , Expression(..)
-    , parse
-    )
+module Brainfuck.Parser exposing (parse)
 
+import Brainfuck.AbstractSyntaxTree exposing (Command(..), Expression(..))
 import Parser as P exposing ((|.), (|=), DeadEnd, Parser, Problem(..), Step(..))
 
 
@@ -107,21 +104,6 @@ deadEndsToString deadEnds =
                     "Bad repeat at " ++ position
     in
     List.foldl (++) "" (List.map deadEndToString deadEnds)
-
-
-type Expression
-    = ExpRoot (List Expression)
-    | ExpBlock (List Expression)
-    | ExpCommand Command
-
-
-type Command
-    = IncrementPointer
-    | DecrementPointer
-    | IncrementByte
-    | DecrementByte
-    | OutputByte
-    | InputByte
 
 
 pProgram : Parser Expression

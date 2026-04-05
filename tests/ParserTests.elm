@@ -1,6 +1,7 @@
 module ParserTests exposing (..)
 
-import Brainfuck.Parser as Parser exposing (Command(..), Expression(..))
+import Brainfuck.AbstractSyntaxTree exposing (Command(..), Expression(..))
+import Brainfuck.Parser as Parser
 import Expect exposing (Expectation)
 import Test exposing (..)
 
