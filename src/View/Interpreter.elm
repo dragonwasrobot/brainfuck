@@ -31,6 +31,7 @@ init =
     { inputCode = ""
     , inputMode = TextMode
     , inputData = []
+    , optimizeCode = False
     , form = Initial
     }
 
@@ -39,6 +40,7 @@ type alias Model =
     { inputCode : Code
     , inputMode : InputMode
     , inputData : List Byte
+    , optimizeCode : Bool
     , form : FormState
     }
 
@@ -68,6 +70,7 @@ type Msg
     | ResumeEvaluation
     | EvaluateStep
     | ChangeMode
+    | ToggleOptimization
     | ResetState
     | SetCode Code
     | SetInput String
@@ -91,6 +94,9 @@ update msg model =
         ChangeMode ->
             changeMode model
 
+        ToggleOptimization ->
+            toggleOptimization model
+
         ResetState ->
             resetState model
 
@@ -105,17 +111,20 @@ startEvaluation : Model -> ( Model, Cmd Msg )
 startEvaluation model =
     let
         parsedProgram =
-            model.inputCode
-                |> Parser.parse
-                -- TODO: Check if optimization is enabled
-                |> Result.map Optimizer.optimize
+            if model.optimizeCode then
+                model.inputCode
+                    |> Parser.parse
+                    |> Result.map Optimizer.optimize
+
+            else
+                model.inputCode
+                    |> Parser.parse
     in
     case parsedProgram of
-        Err _ ->
-            -- TODO: Figure out how to convert err to something useful
+        Err error ->
             let
-                error =
-                    "Failed to parse program due to <deal with DeadEnd output>"
+                message =
+                    "Failed to parse program due to: " ++ error
             in
             ( { model | form = Failed error }, Cmd.none )
 
@@ -214,6 +223,15 @@ changeMode model =
 
         ByteMode _ ->
             ( { model | inputMode = TextMode, inputData = [] }, Cmd.none )
+
+
+toggleOptimization : Model -> ( Model, Cmd Msg )
+toggleOptimization model =
+    if model.optimizeCode then
+        ( { model | optimizeCode = False }, Cmd.none )
+
+    else
+        ( { model | optimizeCode = True }, Cmd.none )
 
 
 resetState : Model -> ( Model, Cmd Msg )
@@ -340,93 +358,114 @@ viewInterpreterForm model =
         viewSubHeader =
             Html.div [ Attr.id "subheader" ]
                 [ Html.span [] [ Html.text "PROGRAM EXECUTION" ] ]
+    in
+    Html.div
+        [ Attr.id "interpreter-form"
+        , Attr.class "mt-4 text-sm"
+        ]
+        [ viewSubHeader
+        , Html.hr [ Attr.class "mt-1.5" ] []
+        , Html.hr [ Attr.class "mt-0.25" ] []
+        , viewSourceArea model
+        , Html.hr [ Attr.class "my-2" ] []
+        , viewInputArea model
+        , Html.hr [ Attr.class "my-2" ] []
+        , viewExecutionArea model
+        , Html.hr [ Attr.class "my-2" ] []
+        , viewDescriptionArea
+        ]
 
-        viewSource =
-            Html.div
-                [ Attr.id "request"
-                , Attr.class "mt-2 flex flex-row"
-                ]
-                [ Html.span [ Attr.class "w-1/6" ] [ Html.text "SOURCE" ]
-                , Html.textarea
-                    [ Attr.id "code-source"
-                    , Attr.class "w-5/6 border-none outline-none resize-none"
-                    , Attr.rows 25
-                    , Attr.placeholder "ENTER SOURCE"
-                    , Events.onInput SetCode
-                    ]
-                    [ Html.text model.inputCode ]
-                ]
 
-        viewInput =
-            let
-                modeLabel =
-                    case model.inputMode of
-                        ByteMode _ ->
-                            "BYTE"
+viewSourceArea : Model -> Html Msg
+viewSourceArea model =
+    Html.div
+        [ Attr.id "source-area"
+        , Attr.class "mt-2 flex flex-row"
+        ]
+        [ Html.span [ Attr.class "w-1/6" ] [ Html.text "SOURCE" ]
+        , Html.textarea
+            [ Attr.id "code-source"
+            , Attr.class "w-5/6 border-none outline-none resize-none"
+            , Attr.rows 25
+            , Attr.placeholder "ENTER SOURCE"
+            , Events.onInput SetCode
+            ]
+            [ Html.text model.inputCode ]
+        ]
 
-                        TextMode ->
-                            "TEXT"
 
-                inputText =
-                    case model.inputMode of
-                        TextMode ->
+viewInputArea : Model -> Html Msg
+viewInputArea model =
+    let
+        modeLabel =
+            case model.inputMode of
+                ByteMode _ ->
+                    "BYTE"
+
+                TextMode ->
+                    "TEXT"
+
+        inputText =
+            case model.inputMode of
+                TextMode ->
+                    model.inputData
+                        |> List.map
+                            (\byte ->
+                                case ASCII.lookup byte of
+                                    Nothing ->
+                                        " 0x" ++ String.toUpper (Hex.toString byte) ++ " "
+
+                                    Just ascii ->
+                                        case ascii.char of
+                                            "LF" ->
+                                                "\n"
+
+                                            "SPACE" ->
+                                                " "
+
+                                            char ->
+                                                char
+                            )
+                        |> String.join ""
+
+                ByteMode newChar ->
+                    let
+                        hexString =
                             model.inputData
-                                |> List.map
-                                    (\byte ->
-                                        case ASCII.lookup byte of
-                                            Nothing ->
-                                                " 0x" ++ String.toUpper (Hex.toString byte) ++ " "
+                                |> List.map (\byte -> "0x" ++ (padHex <| String.toUpper <| Hex.toString <| byte))
+                                |> String.join " "
+                    in
+                    if String.length newChar > 0 then
+                        hexString ++ (" 0x" ++ String.toUpper newChar)
 
-                                            Just ascii ->
-                                                case ascii.char of
-                                                    "LF" ->
-                                                        "\n"
+                    else
+                        hexString
 
-                                                    "SPACE" ->
-                                                        " "
-
-                                                    char ->
-                                                        char
-                                    )
-                                |> String.join ""
-
-                        ByteMode newChar ->
-                            let
-                                hexString =
-                                    model.inputData
-                                        |> List.map (\byte -> "0x" ++ (padHex <| String.toUpper <| Hex.toString <| byte))
-                                        |> String.join " "
-                            in
-                            if String.length newChar > 0 then
-                                hexString ++ (" 0x" ++ String.toUpper newChar)
-
-                            else
-                                hexString
-            in
-            Html.div []
-                [ Html.div
-                    [ Attr.id "response-type"
-                    , Attr.class "flex flex-row"
+        viewInputField =
+            Html.div
+                [ Attr.id "input-field"
+                , Attr.class "mt-1 flex flex-row"
+                ]
+                [ Html.span [ Attr.class "w-1/6" ] [ Html.text "INPUT" ]
+                , Html.textarea
+                    [ Attr.id "data-input"
+                    , Attr.class "w-5/6 border-none outline-none resize-none"
+                    , Attr.rows 5
+                    , Attr.cols 60
+                    , Attr.placeholder "ENTER DATA"
+                    , Attr.value <| String.trimLeft inputText
+                    , Events.onInput SetInput
                     ]
-                    [ Html.span [ Attr.class "w-1/6" ] [ Html.text "MODE" ]
-                    , Html.span [ Attr.class "w-5/6" ] [ Html.text modeLabel ]
-                    ]
-                , Html.div
-                    [ Attr.id "input-field"
-                    , Attr.class "mt-1 flex flex-row"
-                    ]
-                    [ Html.span [ Attr.class "w-1/6" ] [ Html.text "INPUT" ]
-                    , Html.textarea
-                        [ Attr.id "data-input"
-                        , Attr.class "w-5/6 border-none outline-none resize-none"
-                        , Attr.rows 5
-                        , Attr.cols 60
-                        , Attr.placeholder "ENTER DATA"
-                        , Attr.value <| String.trimLeft inputText
-                        , Events.onInput SetInput
-                        ]
-                        []
-                    ]
+                    []
+                ]
+
+        viewModeLabel =
+            Html.div
+                [ Attr.id "response-type"
+                , Attr.class "flex flex-row"
+                ]
+                [ Html.span [ Attr.class "w-1/6" ] [ Html.text "MODE" ]
+                , Html.span [ Attr.class "w-5/6" ] [ Html.text modeLabel ]
                 ]
 
         viewModeButton =
@@ -440,6 +479,36 @@ viewInterpreterForm model =
                 , Html.text "CHANGE MODE"
                 ]
 
+        viewOptimizationButton =
+            let
+                ( icon, label ) =
+                    if model.optimizeCode then
+                        ( "fa-battery-half", "DISABLE OPTIMIZATION" )
+
+                    else
+                        ( "fa-battery-full", "ENABLE OPTIMIZATION" )
+            in
+            Html.button
+                [ Attr.id "toggle-optimization"
+                , Attr.type_ "submit"
+                , Attr.class "ml-4 mt-4 p-2 bg-white border text-sm text-left cursor-pointer"
+                , Events.onClick ToggleOptimization
+                ]
+                [ Html.i [ Attr.class <| "mr-2 fa-solid " ++ icon ] []
+                , Html.text label
+                ]
+    in
+    Html.div [ Attr.id "input-area" ]
+        [ viewModeLabel
+        , viewInputField
+        , viewModeButton
+        , viewOptimizationButton
+        ]
+
+
+viewExecutionArea : Model -> Html Msg
+viewExecutionArea model =
+    let
         viewRunButton =
             let
                 ( msg, icon, label ) =
@@ -448,7 +517,6 @@ viewInterpreterForm model =
                             ( StartEvaluation, "fa-play", "RUN PROGRAM" )
 
                         Failed _ ->
-                            -- TODO: Present error in UI
                             ( StartEvaluation, "fa-play", "RUN PROGRAM" )
 
                         Loaded context ->
@@ -576,33 +644,22 @@ viewInterpreterForm model =
                         [ Html.text response ]
                     ]
                 ]
-
-        viewDescription =
-            Html.div [ Attr.id "function-description" ]
-                [ Html.text "Once the SOURCE text has been entered, hit CTRL plus ENTER to send the program from the terminal to the BF-4000 mainframe for execution. Once completed, the STATUS field will display the message SUCCESS along with the output of the program in the OUTPUT field."
-                , Html.br [] []
-                , Html.br [] []
-                , Html.text "If the STATUS field displays ERROR then the OUTPUT field includes a description of the error encountered during execution."
-                , Html.br [] []
-                , Html.br [] []
-                , Html.text "A reference to the BF-4000 machine language can be found on pages 138-149."
-                ]
     in
-    Html.div
-        [ Attr.id "interpreter-form"
-        , Attr.class "mt-4 text-sm"
-        ]
-        [ viewSubHeader
-        , Html.hr [ Attr.class "mt-1.5" ] []
-        , Html.hr [ Attr.class "mt-0.25" ] []
-        , viewSource
-        , Html.hr [ Attr.class "my-2" ] []
-        , viewInput
-        , viewModeButton
-        , Html.hr [ Attr.class "my-2" ] []
-        , viewResult
+    Html.div [ Attr.id "execution-area" ]
+        [ viewResult
         , viewRunButton
         , viewResetButton
-        , Html.hr [ Attr.class "my-2" ] []
-        , viewDescription
+        ]
+
+
+viewDescriptionArea : Html msg
+viewDescriptionArea =
+    Html.div [ Attr.id "function-description" ]
+        [ Html.text "Once the SOURCE text has been entered, hit CTRL plus ENTER to send the program from the terminal to the BF-4000 mainframe for execution. Once completed, the STATUS field will display the message SUCCESS along with the output of the program in the OUTPUT field."
+        , Html.br [] []
+        , Html.br [] []
+        , Html.text "If the STATUS field displays ERROR then the OUTPUT field includes a description of the error encountered during execution."
+        , Html.br [] []
+        , Html.br [] []
+        , Html.text "A reference to the BF-4000 machine language can be found on pages 138-149."
         ]
