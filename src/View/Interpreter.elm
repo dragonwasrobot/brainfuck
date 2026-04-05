@@ -569,6 +569,8 @@ viewInterpreterForm model =
                     , Html.textarea
                         [ Attr.id "code-output"
                         , Attr.disabled True
+                        , Attr.rows 5
+                        , Attr.cols 60
                         , Attr.class "w-5/6 border-none outline-none resize-none whitespace-normal"
                         ]
                         [ Html.text response ]
