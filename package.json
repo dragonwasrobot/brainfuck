@@ -22,6 +22,6 @@
     "@tailwindcss/cli": "^4.2.2",
     "elm-test": "^0.19.1-revision17",
     "husky": "^9.1.7",
-    "tailwindcss": "^4.2.2"
+    "tailwindcss": "^4.2.3"
   }
 }
