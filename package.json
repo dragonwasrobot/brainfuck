@@ -16,7 +16,7 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@commitlint/cli": "^20.5.2",
+    "@commitlint/cli": "^20.5.3",
     "@commitlint/config-conventional": "^20.5.0",
     "@fortawesome/fontawesome-free": "^7.2.0",
     "@tailwindcss/cli": "^4.2.4",
