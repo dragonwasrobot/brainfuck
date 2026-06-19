@@ -497,12 +497,20 @@ viewInputArea model =
                 [ Html.i [ Attr.class <| "mr-2 fa-solid " ++ icon ] []
                 , Html.text label
                 ]
+
+        viewModeNote =
+            Html.div
+                [ Attr.id "mode-note"
+                , Attr.class "mt-2 text-sm"
+                ]
+                [ Html.text "Mode reassignment is destructive of input. The operator is advised to retain a paper copy." ]
     in
     Html.div [ Attr.id "input-area" ]
         [ viewModeLabel
         , viewInputField
         , viewModeButton
         , viewOptimizationButton
+        , viewModeNote
         ]
 
 
@@ -568,7 +576,7 @@ viewExecutionArea model =
                             "FINISHED"
 
                         Crashed reason ->
-                            "CRASH: " ++ reason
+                            "CRASH: " ++ String.toUpper reason
 
                 status =
                     case model.form of
@@ -576,7 +584,7 @@ viewExecutionArea model =
                             "INITIAL"
 
                         Failed reason ->
-                            "FAILED: " ++ reason
+                            "FAILED: " ++ String.toUpper reason
 
                         Loaded context ->
                             context.state |> stateToLabel
@@ -655,11 +663,11 @@ viewExecutionArea model =
 viewDescriptionArea : Html msg
 viewDescriptionArea =
     Html.div [ Attr.id "function-description" ]
-        [ Html.text "Once the SOURCE text has been entered, hit CTRL plus ENTER to send the program from the terminal to the BF-4000 mainframe for execution. Once completed, the STATUS field will display the message SUCCESS along with the output of the program in the OUTPUT field."
+        [ Html.text "Once the SOURCE text has been entered, hit RUN PROGRAM to send the program from the terminal to the BF-4000 mainframe for execution. Once completed, the STATUS field will display the message FINISHED along with the output of the program in the OUTPUT field."
         , Html.br [] []
         , Html.br [] []
-        , Html.text "If the STATUS field displays ERROR then the OUTPUT field includes a description of the error encountered during execution."
+        , Html.text "If the STATUS field displays CRASH or FAILED then an accompanying description of the encountered error during execution is displayed."
         , Html.br [] []
         , Html.br [] []
-        , Html.text "A reference to the BF-4000 machine language can be found on pages 138-149."
+        , Html.text "The specification of the BF-4000 machine language is located in \"Section 2.1 (BF-4000 MACHINE LANGUAGE)\" of the Reference Manual; the character set is tabulated in \"Appendix A.2 (CHARACTER SETS)\""
         ]

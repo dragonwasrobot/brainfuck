@@ -31,11 +31,11 @@ view =
         , Attr.class "mt-4 min-h-164"
         ]
         [ Html.div
-            [ Attr.id "subheader"
-            , Attr.class "text-left font-semibold"
-            ]
-            [ Html.span [ Attr.class "mt-2" ] [ Html.text "CHARACTER SETS" ]
-            ]
+            [ Attr.id "subheader", Attr.class "text-left font-semibold" ]
+            [ Html.span [ Attr.class "mt-2" ] [ Html.text "A.2 CHARACTER SETS" ] ]
+        , Html.hr [ Attr.class "mt-1" ] []
+        , Html.div [ Attr.class "mt-2 text-sm hyphens-auto" ]
+            [ Html.span [] [ Html.text "The BF-4000 input/output streams encode bytes per the United States of America Standard Code for Information Interchange (USASCII, 1967 revision). The table below enumerates the printable and control points." ] ]
         , Html.hr [ Attr.class "mt-2" ] []
         , Html.table [ Attr.id "ascii-table", Attr.class "w-full table-auto" ]
             [ Html.thead [ Attr.class "font-semibold text-center" ]

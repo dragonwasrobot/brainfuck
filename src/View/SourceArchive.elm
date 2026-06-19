@@ -63,7 +63,7 @@ view selectSourceFile =
             [ Attr.id "subheader"
             , Attr.class "text-left font-semibold"
             ]
-            [ Html.span [ Attr.class "mt-2" ] [ Html.text "SOURCE ARCHIVES" ] ]
+            [ Html.span [ Attr.class "mt-2" ] [ Html.text "7.4 SOURCE ARCHIVES" ] ]
         , Html.hr [ Attr.class "mt-2" ] []
         , Html.div [ Attr.id "list-header", Attr.class "mt-2 flex flex-row justify-between" ]
             [ Html.span [ Attr.class "font-semibold" ] [ Html.text "TAPE TITLE" ]
@@ -75,10 +75,13 @@ view selectSourceFile =
         , Html.div [ Attr.class "mt-8 ml-2 text-sm hyphens-auto" ]
             [ Html.span []
                 [ Html.span [ Attr.class "font-semibold mr-2" ] [ Html.text "BX-YY-ZZ" ]
-                , Html.text "denotes the box containing the tape."
+                , Html.text "identifies the storage box;"
                 , Html.br [] []
                 , Html.span [ Attr.class "font-semibold mr-2" ] [ Html.text "S-XX" ]
-                , Html.text "denotes the shelf storing the box."
+                , Html.text "the shelf upon which it resides."
+                , Html.br [] []
+                , Html.br [] []
+                , Html.text "Tapes marked (*) are presently signed out and may be unavailable until returned."
                 ]
             ]
         ]
