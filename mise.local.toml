@@ -1,24 +1,25 @@
 [tools]
 node = "24"
 elm = "0.19.1"
+pnpm = "11"
 
 [tasks.lint]
-run = "npm run format"
+run = "pnpm run format"
 
 [tasks."build:css"]
-run = "npm run css"
+run = "pnpm run css"
 
 [tasks."build:compile"]
-run = "npm run compile"
+run = "pnpm run compile"
 
 [tasks.build]
 depends = ["lint", "build:*"]
 
 [tasks.test]
-run = "npm run test"
+run = "pnpm run test"
 
 [tasks.dev]
 depends = ["build", "test"]
 
 [tasks.serve]
-run = "npm run serve"
+run = "pnpm run serve"
