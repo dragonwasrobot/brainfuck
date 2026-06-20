@@ -8,13 +8,14 @@
     "uglify-js": "^3.19.3"
   },
   "scripts": {
-    "css": "npx @tailwindcss/cli -i docs/style.css -o docs/main.css",
+    "css": "pnpm exec tailwindcss -i docs/style.css -o docs/main.css",
     "compile": "elm make --debug --output=docs/elm.min.js src/Main.elm",
     "serve": "cd docs && python3 -m http.server",
-    "format": "npx elm-format --validate src",
-    "test": "npx elm-test tests",
+    "format": "pnpm exec elm-format --validate src",
+    "test": "pnpm exec elm-test tests",
     "prepare": "husky"
   },
+  "packageManager": "pnpm@11.8.0",
   "devDependencies": {
     "@commitlint/cli": "^21.0.2",
     "@commitlint/config-conventional": "^21.0.2",

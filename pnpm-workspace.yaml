@@ -1,0 +1,7 @@
+# pnpm settings (pnpm 11 no longer reads the "pnpm" field in package.json).
+allowBuilds:
+  # elm-format ships a native binary its install script wires up; without it,
+  # node tries to run the raw binary as JS and `elm-format` crashes.
+  elm-format: true
+  # @parcel/watcher is a @tailwindcss/cli subdep, only used for --watch; not needed.
+  '@parcel/watcher': false
