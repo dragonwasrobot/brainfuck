@@ -20,7 +20,7 @@
     "@commitlint/cli": "^21.1.0",
     "@commitlint/config-conventional": "^21.0.2",
     "@fortawesome/fontawesome-free": "^7.3.0",
-    "@tailwindcss/cli": "^4.3.1",
+    "@tailwindcss/cli": "^4.3.2",
     "elm-test": "^0.19.1-revision17",
     "husky": "^9.1.7",
     "tailwindcss": "^4.2.3"
