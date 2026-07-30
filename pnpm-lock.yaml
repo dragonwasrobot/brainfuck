@@ -25,8 +25,8 @@ importers:
         specifier: ^21.2.0
         version: 21.2.0
       '@fortawesome/fontawesome-free':
-        specifier: ^7.3.0
-        version: 7.3.0
+        specifier: ^7.3.1
+        version: 7.3.1
       '@tailwindcss/cli':
         specifier: ^4.3.2
         version: 4.3.2
@@ -164,8 +164,8 @@ packages:
     resolution: {integrity: sha512-TzlTVpKPjaqW6qOYjQcYUDuGsLCNsvFHVBXkYGTAnf5V37jCWrE5haKNXzz0WZUtVHjrpV76L1buANjwXMfT8w==}
     engines: {node: '>=22'}
 
-  '@fortawesome/fontawesome-free@7.3.0':
-    resolution: {integrity: sha512-Yw4Qa43P6e4Xwh0TwEUkHQNRJInWaqIBo73VJmns3j2AIlZPAvUcR4yGIxCPqPRCgyJ5KIVIalF/I1GxhZ/Kgw==}
+  '@fortawesome/fontawesome-free@7.3.1':
+    resolution: {integrity: sha512-wmglKKPDIkgV3aWlZzWECCPoGIkYCulzBwxG9+w7rc5BGapZ6cPMpoPOT8k36J0Ni7PPX6c/rsoMWfS4d1MUMg==}
     engines: {node: '>=6'}
 
   '@isaacs/cliui@8.0.2':
@@ -1117,7 +1117,7 @@ snapshots:
 
   '@conventional-changelog/template@1.2.1': {}
 
-  '@fortawesome/fontawesome-free@7.3.0': {}
+  '@fortawesome/fontawesome-free@7.3.1': {}
 
   '@isaacs/cliui@8.0.2':
     dependencies:
